@@ -5824,6 +5824,8 @@ async function joinChecked(id) {
   const snap = await get(ref(db, 'rooms/' + id));
   if (!snap.exists()) throw new Error('팀을 찾을 수 없어요');
   const m = snap.child('members').val() || {};
+  /* 아무도 없는 팀(동시에 끊겨 남은 것)은 지우고 없는 팀으로 처리 */
+  if (!Object.keys(m).length) { remove(ref(db, 'rooms/' + id)).catch(() => {}); throw new Error('팀을 찾을 수 없어요'); }
   if (m[me] && roomId === id) return;
   if (Object.keys(m).length >= TEAM_MAX) throw new Error('팀이 가득 찼어요');
   await leaveRoom();
@@ -5834,7 +5836,7 @@ BSO.quickJoin = async () => {
   await BSO.ready;
   const snap = await get(query(ref(db, 'rooms'), limitToLast(40)));
   const ids = [];
-  snap.forEach(c => { const m = c.child('members').val() || {}; const n = Object.keys(m).length; if (n > 0 && n < TEAM_MAX && !m[me] && c.key !== roomId) ids.push(c.key); });
+  snap.forEach(c => { const m = c.child('members').val() || {}; const n = Object.keys(m).length; if (n === 0) remove(c.ref).catch(() => {}); if (n > 0 && n < TEAM_MAX && !m[me] && c.key !== roomId) ids.push(c.key); });
   for (const id of ids.sort(() => Math.random() - .5)) { try { await joinChecked(id); return false; } catch (e) {} }
   await createRoom(); return true;
 };
