@@ -59,6 +59,17 @@
         ".validate": "!newData.exists() || (newData.hasChildren(['from', 'nick', 'text', 't']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 200 && newData.child('nick').isString() && newData.child('nick').val().length <= 12 && newData.child('t').val() === now)"
       }
     },
+    "relay": {
+      "$room": {
+        "$to": {
+          ".read": "auth != null && auth.uid === $to",
+          "$id": {
+            ".write": "auth != null && ((auth.uid === $to && !newData.exists()) || (!data.exists() && newData.child('f').val() === auth.uid && root.child('rooms').child($room).child('members').child(auth.uid).exists()))",
+            ".validate": "!newData.exists() || (newData.hasChildren(['f', 'd']) && newData.child('d').isString() && newData.child('d').val().length <= 200000)"
+          }
+        }
+      }
+    },
     "usage": {
       ".read": "auth != null",
       "$month": {
