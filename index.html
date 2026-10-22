@@ -99,6 +99,7 @@
 .h-slot.filled{background:none!important;border:none!important;box-shadow:none!important;width:calc(var(--u)*20);height:calc(var(--u)*24);transform:translate(-50%,-74%);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:visible;padding:0;font-size:inherit}
 .mate-nm{font-family:var(--name);font-weight:900;font-size:calc(var(--u)*2);color:#fff;white-space:nowrap;text-shadow:-1.5px -1.5px 0 #14122a,1.5px -1.5px 0 #14122a,-1.5px 1.5px 0 #14122a,1.5px 1.5px 0 #14122a}
 .h-slot.ready .mate-nm{color:#7dff9a}
+.mate-act{display:block;font-size:.75em;color:#ffd23f;text-align:center}
 .mate-cv{width:100%;height:auto;aspect-ratio:1;pointer-events:none}
 #teamBox{position:absolute;inset:0;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);z-index:34;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,min(560px,52%));background:rgba(10,8,30,.55)}
 .tb-panel{grid-column:2;display:flex;flex-direction:column;min-height:0;background:linear-gradient(180deg,#4a32c9,#2b1f93);background-image:linear-gradient(180deg,rgba(74,50,201,.96),rgba(43,31,147,.96)),radial-gradient(circle at 40px 40px,rgba(255,255,255,.06) 22px,transparent 23px);background-size:100% 100%,110px 110px;border-left:4px solid #14122a;color:#fff;font-family:var(--display)}
@@ -2187,7 +2188,7 @@ function sfx(kind,amt){if(!sfxOn||!AC||AC.state!=='running')return;const a=AC,t=
   document.getElementById('menuBtn').addEventListener('click',()=>{ret=document.activeElement;gm.hidden=false;document.getElementById('gmSet').focus();});
   document.getElementById('gmClose').addEventListener('click',gmClose);gm.addEventListener('click',e=>{if(e.target===gm)gmClose();});
   document.getElementById('gmSet').addEventListener('click',()=>{gmClose();sync();box.hidden=false;sl.focus();});
-  for(const id of['gmRecord','gmRank','gmTv','gmMail','gmMaker','gmSc'])document.getElementById(id).addEventListener('click',()=>toast('준비 중인 기능이에요'));
+  for(const id of['gmRecord','gmRank','gmTv','gmMail','gmMaker','gmSc'])document.getElementById(id).addEventListener('click',()=>toast('준비 중'));
   /* 닉네임: 기기에 저장, 없으면 기본값을 주지 않음 */
   const NICK_KEY='bs_nick';
   const getNick=()=>{try{return(localStorage.getItem(NICK_KEY)||'').trim();}catch(e){return'';}};
@@ -2297,7 +2298,7 @@ function renderTeam(r){
   const ids=r?Object.keys(r.members).filter(u=>u!==r.me).sort((x,y)=>(r.members[x].j||0)-(r.members[y].j||0)):[];
   slots.forEach((s,i)=>{const m=ids[i]?r.members[ids[i]]:null;s.textContent='';s.classList.toggle('filled',!!m);s.classList.toggle('ready',!!(m&&m.ready));
     if(!m){s.textContent='＋';s.setAttribute('aria-label','친구 초대');return;}
-    const nm=el('span','mate-nm',(m.nick||'?')+(m.ready?' ✓':''));
+    const nm=el('span','mate-nm',(m.nick||'?')+(m.ready?' ✓':''));const ACT={brawler:'브롤러 선택 중',map:'맵 선택 중'};if(ACT[m.act]&&!m.ready)nm.append(el('small','mate-act',ACT[m.act]));
     const c=document.createElement('canvas');c.width=c.height=300;c.className='mate-cv';
     const cc=c.getContext('2d');cc.scale(300/220,300/220);try{drawFront(cc,HEROES[m.hero]?m.hero:'random',110,108,206);}catch(e){}
     s.append(nm,c);s.setAttribute('aria-label','팀원 '+(m.nick||'')+(m.ready?' 준비 완료':''));});
@@ -2353,7 +2354,7 @@ for(const s of document.querySelectorAll('.h-right .side')){
   if(t==='친구'){s.style.cursor='pointer';s.addEventListener('click',openOnline);}
 }
 for(const s of document.querySelectorAll('.h-slot')){s.style.cursor='pointer';s.setAttribute('aria-hidden','false');s.setAttribute('role','button');s.addEventListener('click',()=>openTeamBox());}
-document.getElementById('gmFriendBattle').addEventListener('click',()=>toast('준비 중인 기능이에요'));
+document.getElementById('gmFriendBattle').addEventListener('click',()=>toast('준비 중'));
 /* ---- 팀 구성 창 (+ 버튼) ---- */
 const ST_LABEL=s=>s==='전투 중'?'전투 중':s==='오프라인'?'오프라인':'메뉴 화면';
 const getRecent=()=>{try{return JSON.parse(localStorage.getItem('bs_recent')||'[]');}catch(e){return[];}};
@@ -2647,6 +2648,16 @@ bso(B=>{
   });
 });
 /* 접속 상태(전투 중 / 메뉴 화면) 알리기 */
+window.__mapLocked=()=>{const r=window.BSO&&window.BSO.room;if(!r||Object.keys(r.members).length<2||r.isHost)return false;toast('맵은 방장만 고를 수 있어요');return true;};
+{let lastAct=null,lastSel='',lastApplied='';setInterval(()=>{const B=window.BSO;if(!B||!B.online)return;const r=B.room;if(!r){lastAct=null;lastSel='';return;}
+  const vis=id=>{const e=document.getElementById(id);return e&&!e.hidden;};
+  const act=state!=='menu'?null:(vis('scrHeroes')||vis('scrDetail'))?'brawler':vis('scrPlay')?'map':null;
+  if(act!==lastAct){lastAct=act;B.setAct(act);}
+  if(r.isHost){const sel=JSON.stringify({mode:modeId,map:mapIdx,rand:mapRand||null});if(sel!==lastSel){lastSel=sel;B.setSel(JSON.parse(sel));}}
+},500);
+bso(B=>B.on('room',r=>{if(!r||r.isHost||!r.sel||state!=='menu')return;const k=JSON.stringify(r.sel);if(k===lastApplied)return;lastApplied=k;
+  const sl=r.sel;if(MODES[sl.mode])modeId=sl.mode;if(typeof sl.map==='number'&&MAPS[sl.map])mapIdx=sl.map;mapRand=sl.rand||null;duelSel=null;
+  const h=document.getElementById('scrHome');if(h&&!h.hidden)renderHome();}));}
 {let lastHero='';setInterval(()=>{const B=window.BSO;if(B&&B.online&&B.setHero){const h=heroRand?'random':chosen;if(h!==lastHero){lastHero=h;B.setHero(h);}}},800);}
 {let lastSt='';setInterval(()=>{const s=state==='play'?'전투 중':'메뉴';if(s!==lastSt&&window.BSO&&window.BSO.online&&window.BSO.setState){lastSt=s;window.BSO.setState(s);}},1500);}
 bso(B=>{B.on('room',r=>{rememberTeam(r);if(!document.getElementById('teamBox').hidden)renderTeamBox();});B.on('presence',()=>{if(!document.getElementById('teamBox').hidden)renderTeamBox();});B.on('ready',()=>{const t=new URLSearchParams(location.search).get('team');if(t&&/^[A-Za-z0-9]{6}$/.test(t))B.joinByCode(t.toUpperCase()).then(()=>toast('팀에 들어왔어요')).catch(e=>toast(e.message||'팀에 들어가지 못했어요'));});});
@@ -5487,10 +5498,10 @@ function renderHomeDuel(){const c=document.getElementById('hCanvas'),cc=c.getCon
   document.getElementById('hName').textContent=heroRand?'랜덤':HEROES[chosen].name;document.getElementById('hModeName').textContent='듀얼 · 봇전';document.getElementById('hMapName').textContent=duelMapName(duelSel.mi);drawModeIcon(document.getElementById('hModeIc'),'duel');}
 function renderHome(){if(duelSel)return renderHomeDuel();const c=document.getElementById('hCanvas'),cc=c.getContext('2d');cc.setTransform(1,0,0,1,0,0);cc.clearRect(0,0,440,440);cc.scale(2,2);drawFront(cc,heroRand?'random':chosen,110,108,206);
   document.getElementById('hName').textContent=heroRand?'랜덤':HEROES[chosen].name;const RA=mapRand==='all'||mapRand==='team';document.getElementById('hModeName').textContent=mapRand==='all'?'랜덤':mapRand==='team'?'3대3 랜덤':MODES[mapRand||modeId].name;document.getElementById('hMapName').textContent=mapRand==='all'?'모든 모드 · 모든 맵':mapRand==='team'?'쇼다운 제외 모든 맵':mapRand?'랜덤 맵':MAPS[mapIdx].name;drawModeIcon(document.getElementById('hModeIc'),RA?'rand':(mapRand||modeId));const now=new Date(),mid=new Date(now);mid.setHours(24,0,0,0);const mins=Math.floor((mid-now)/60000);document.getElementById('hTimer').textContent='신규 맵: '+(mins>=60?Math.floor(mins/60)+'시간':mins+'분');}
-document.getElementById('hInfo').onclick=()=>{if(duelSel)return openInfo('duel',duelSel.mi!=null?MAPS[duelSel.mi]:null);if(mapRand==='all'||mapRand==='team')return scr('scrPlay');if(mapRand)return openInfo(mapRand,null);openInfo(modeId,MAPS[mapIdx]);};
+document.getElementById('hInfo').onclick=()=>{if((mapRand==='all'||mapRand==='team')&&window.__mapLocked&&window.__mapLocked())return;if(duelSel)return openInfo('duel',duelSel.mi!=null?MAPS[duelSel.mi]:null);if(mapRand==='all'||mapRand==='team')return scr('scrPlay');if(mapRand)return openInfo(mapRand,null);openInfo(modeId,MAPS[mapIdx]);};
 document.getElementById('hBrawlers').onclick=()=>scr('scrHeroes');
 document.getElementById('hCanvas').onclick=()=>scr('scrHeroes');document.getElementById('hCanvas').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();scr('scrHeroes');}});
-document.getElementById('hMode').onclick=()=>scr('scrPlay');
+document.getElementById('hMode').onclick=()=>{if(window.__mapLocked&&window.__mapLocked())return;scr('scrPlay');};
 document.getElementById('hPlay').onclick=()=>(window.__teamPlay?window.__teamPlay():startGame());
 document.getElementById('lBack').onclick=()=>{if(!pickBack())scr('scrHome');};document.getElementById('dHome').onclick=()=>{pickFor=null;pickTitle();scr('scrHome');};document.getElementById('lHome').onclick=()=>{pickFor=null;pickTitle();scr('scrHome');};
 for(const[b,to]of[['pHome','scrHome']])document.getElementById(b).onclick=()=>scr(to);
@@ -5640,7 +5651,7 @@ function publishRoom() {
   if (!roomId) { BSO.room = null; emit('room', null); return; }
   const conn = {};
   for (const u in peers) conn[u] = !!(peers[u].dc && peers[u].dc.readyState === 'open');
-  BSO.room = { id: roomId, host: hostUid, isHost, members: lastMembers, connected: conn, me, live: lastRoomVal.live || null };
+  BSO.room = { id: roomId, host: hostUid, isHost, members: lastMembers, connected: conn, me, live: lastRoomVal.live || null, sel: lastRoomVal.sel || null };
   emit('room', BSO.room);
 }
 const TEAM_MAX = 3;
@@ -5743,6 +5754,8 @@ BSO.myHero = 'random';
 const monthKey = () => new Date().toISOString().slice(0, 7);
 BSO.getUsage = async () => { await BSO.ready; const s = await get(ref(db, 'usage/' + monthKey())); return s.exists() ? (+s.val() || 0) : 0; };
 BSO.peekRoom = async id => { await BSO.ready; const s = await get(ref(db, 'rooms/' + id)); return s.exists() ? s.val() : null; };
+BSO.setAct = async a => { if (!roomId || !lastMembers[me]) return; await update(ref(db, 'rooms/' + roomId + '/members/' + me), { act: a || null }).catch(() => {}); };
+BSO.setSel = async sel => { if (!roomId || !isHost) return; await update(ref(db, 'rooms/' + roomId), { sel: sel || null }).catch(() => {}); };
 BSO.setLive = async n => { if (!roomId || !isHost) return; await update(ref(db, 'rooms/' + roomId), { live: n || null }).catch(() => {}); };
 BSO.setHero = async h => { BSO.myHero = h || 'random'; if (roomId && lastMembers[me]) await update(ref(db, 'rooms/' + roomId + '/members/' + me), { hero: BSO.myHero }).catch(() => {}); };
 BSO.setReady = async (v, hero) => { if (!roomId) return; await update(ref(db, 'rooms/' + roomId + '/members/' + me), { ready: !!v, hero: hero || null }); };
