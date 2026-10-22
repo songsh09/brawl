@@ -75,6 +75,8 @@
 .tb-foot{display:grid;grid-template-columns:1fr 1fr 1fr 1.4fr;gap:8px;padding:8px 14px 12px}
 .tb-btn{appearance:none;cursor:pointer;border:3px solid #14122a;border-radius:8px;background:#2f7cf0;color:#fff;font-family:var(--display);font-size:clamp(15px,2vw,20px);padding:12px 6px;box-shadow:0 4px 0 #14122a;text-shadow:0 2px 0 #14122a}
 .tb-quick{background:linear-gradient(180deg,#ffe24a,#f5c518);color:#14122a;text-shadow:none}
+.hplay.ready-on{background:linear-gradient(180deg,#5dff8a,#2fbf55);color:#14122a}
+.h-slot.ready{background:rgba(93,255,138,.85)}
 .tb-btn:active,.tb-inv:active,.tb-blue:active,.tb-icon:active{transform:translateY(2px);box-shadow:0 2px 0 #14122a}
 @media (max-width:700px){#teamBox{grid-template-columns:0 1fr}.tb-panel{border-left:none}}
 #nickGate{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#1d1a3c;padding:16px}
@@ -2203,7 +2205,8 @@ function openOnline(){renderOnline();document.getElementById('onBox').hidden=fal
 function renderTeam(r){
   const slots=[...document.querySelectorAll('.h-slot')];
   const others=r?Object.keys(r.members).filter(u=>u!==r.me).map(u=>r.members[u].nick||'?'):[];
-  slots.forEach((s,i)=>{const n=others[i];s.textContent=n?n:'＋';s.classList.toggle('filled',!!n);s.setAttribute('aria-label',n?('팀원 '+n):'친구 초대');});
+  const rd=r?Object.keys(r.members).filter(u=>u!==r.me).map(u=>!!r.members[u].ready):[];
+  slots.forEach((s,i)=>{const n=others[i];s.textContent=n?n+(rd[i]?' ✓':''):'＋';s.classList.toggle('filled',!!n);s.classList.toggle('ready',!!rd[i]);s.setAttribute('aria-label',n?('팀원 '+n+(rd[i]?' 준비 완료':'')):'친구 초대');});
 }
 /* 전체 채팅 */
 function renderChat(){
@@ -2319,6 +2322,22 @@ function openTeamBox(){renderTeamBox();document.getElementById('tbJoinRow').hidd
   document.getElementById('tbQuick').addEventListener('click',()=>{if(!need())return;window.BSO.quickJoin().then(made=>{toast(made?'자리가 있는 팀이 없어서 새 팀을 만들었어요':'팀에 들어갔어요');renderTeamBox();}).catch(e=>toast(e.message||'빠른 참가에 실패했어요'));});
   document.getElementById('tbLeave').addEventListener('click',()=>{if(window.BSO)window.BSO.leaveRoom();});
 }
+/* 팀 준비 완료 → 모두 준비되면 함께 시작 */
+function teamReadyInfo(){const B=window.BSO,r=B&&B.room;if(!r)return null;const ids=Object.keys(r.members);if(ids.length<2)return null;return{r,me:!!(r.members[r.me]&&r.members[r.me].ready)};}
+function updatePlayBtn(){const i=teamReadyInfo(),b=document.getElementById('hPlay');b.textContent=i?(i.me?'준비 취소':'준비 완료'):'플레이';b.classList.toggle('ready-on',!!(i&&i.me));}
+window.__teamPlay=()=>{const i=teamReadyInfo();if(!i)return startGame();window.BSO.setReady(!i.me).catch(e=>toast(e.message||'준비하지 못했어요'));};
+bso(B=>{
+  B.on('room',()=>updatePlayBtn());
+  B.on('allReady',()=>{B.startTeam({mode:modeId,map:mapIdx,rand:mapRand||null}).catch(()=>{});});
+  B.on('start',d=>{
+    if(state!=='menu')return;
+    if(d&&MODES[d.mode])modeId=d.mode;
+    if(d&&typeof d.map==='number'&&MAPS[d.map])mapIdx=d.map;
+    mapRand=d&&d.rand?d.rand:null;duelSel=null;
+    for(const id of['teamBox','onBox','chatBox','gMenu','profBox','setBox','invBox']){const e=document.getElementById(id);if(e)e.hidden=true;}
+    renderHome();toast('팀원 모두 준비 완료! 전투를 시작해요');startGame();
+  });
+});
 /* 접속 상태(전투 중 / 메뉴 화면) 알리기 */
 {let lastSt='';setInterval(()=>{const s=state==='play'?'전투 중':'메뉴';if(s!==lastSt&&window.BSO&&window.BSO.online&&window.BSO.setState){lastSt=s;window.BSO.setState(s);}},1500);}
 bso(B=>{B.on('room',r=>{rememberTeam(r);if(!document.getElementById('teamBox').hidden)renderTeamBox();});B.on('presence',()=>{if(!document.getElementById('teamBox').hidden)renderTeamBox();});B.on('ready',()=>{const t=new URLSearchParams(location.search).get('team');if(t&&/^[A-Za-z0-9]{6}$/.test(t))B.joinByCode(t.toUpperCase()).then(()=>toast('팀에 들어왔어요')).catch(e=>toast(e.message||'팀에 들어가지 못했어요'));});});
@@ -5163,7 +5182,7 @@ document.getElementById('hInfo').onclick=()=>{if(duelSel)return openInfo('duel',
 document.getElementById('hBrawlers').onclick=()=>scr('scrHeroes');
 document.getElementById('hCanvas').onclick=()=>scr('scrHeroes');document.getElementById('hCanvas').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();scr('scrHeroes');}});
 document.getElementById('hMode').onclick=()=>scr('scrPlay');
-document.getElementById('hPlay').onclick=()=>startGame();
+document.getElementById('hPlay').onclick=()=>(window.__teamPlay?window.__teamPlay():startGame());
 document.getElementById('lBack').onclick=()=>{if(!pickBack())scr('scrHome');};document.getElementById('dHome').onclick=()=>{pickFor=null;pickTitle();scr('scrHome');};document.getElementById('lHome').onclick=()=>{pickFor=null;pickTitle();scr('scrHome');};
 for(const[b,to]of[['pHome','scrHome']])document.getElementById(b).onclick=()=>scr(to);
 /* 한글 검색: 받침 없이 친 글자는 초성·중성만 맞으면, 자음만 친 글자는 초성만 맞으면 일치 */
@@ -5233,7 +5252,7 @@ try {
 } catch (e) { emit('status', '온라인 준비 실패: ' + (e.message || e)); }
 
 let me = null, myCode = null, st = '메뉴';
-let roomId = null, hostUid = null, isHost = false, roomUnsub = null, lastMembers = {}, armedFor = '';
+let roomId = null, hostUid = null, isHost = false, roomUnsub = null, lastMembers = {}, armedFor = '', lastStartN = null, firstSnap = true, allReadySent = false;
 const peers = {};
 
 /* ---------- 로그인 · 친구 코드 · 접속 ---------- */
@@ -5350,7 +5369,7 @@ async function joinRoom(id) {
   emit('log', '팀에 들어왔어요');
 }
 async function enterRoom(id, asHost) {
-  roomId = id; hostUid = asHost ? me : null; isHost = !!asHost; lastMembers = {}; armedFor = '';
+  roomId = id; hostUid = asHost ? me : null; isHost = !!asHost; lastMembers = {}; armedFor = ''; lastStartN = null; firstSnap = true; allReadySent = false;
   roomUnsub = onValue(ref(db, 'rooms/' + id), s => onRoom(id, s));
   updatePresence(); publishRoom();
 }
@@ -5382,6 +5401,14 @@ function onRoom(id, s) {
     const key = Object.keys(m).sort().join(',');
     if (key !== armedFor) { armedFor = key; armHostDisconnect(m).catch(() => {}); }
   }
+  /* 시작 신호: 처음 받은 값은 무시하고, 새로 바뀐 값만 시작으로 봄 */
+  const sn = v.start && v.start.n;
+  if (firstSnap) { lastStartN = sn || null; firstSnap = false; }
+  else if (sn && sn !== lastStartN) { lastStartN = sn; emit('start', v.start); }
+  /* 방장: 2명 이상이고 모두 준비 완료면 시작 요청 */
+  const ids = Object.keys(m), allReady = ids.length >= 2 && ids.every(u => m[u].ready);
+  if (isHost && allReady && !allReadySent) { allReadySent = true; emit('allReady', true); }
+  if (!allReady) allReadySent = false;
   publishRoom();
 }
 async function leaveRoom(already) {
@@ -5402,6 +5429,13 @@ async function leaveRoom(already) {
   updatePresence(); publishRoom();
 }
 BSO.leaveRoom = () => leaveRoom();
+BSO.setReady = async v => { if (!roomId) return; await set(ref(db, 'rooms/' + roomId + '/members/' + me + '/ready'), !!v); };
+BSO.startTeam = async cfg => {
+  if (!roomId || !isHost) return;
+  const upd = { start: Object.assign({ n: Date.now() }, cfg || {}) };
+  for (const u in lastMembers) upd['members/' + u + '/ready'] = false;
+  await update(ref(db, 'rooms/' + roomId), upd);
+};
 BSO.createRoom = () => BSO.ready.then(createRoom);
 
 function newPeer(uid, nickName) {
