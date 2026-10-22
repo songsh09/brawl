@@ -54,7 +54,7 @@
 #teamBox{position:absolute;inset:0;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);z-index:34;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,min(560px,52%));background:rgba(10,8,30,.55)}
 .tb-panel{grid-column:2;display:flex;flex-direction:column;min-height:0;background:linear-gradient(180deg,#4a32c9,#2b1f93);background-image:linear-gradient(180deg,rgba(74,50,201,.96),rgba(43,31,147,.96)),radial-gradient(circle at 40px 40px,rgba(255,255,255,.06) 22px,transparent 23px);background-size:100% 100%,110px 110px;border-left:4px solid #14122a;color:#fff;font-family:var(--display)}
 .tb-head{display:flex;align-items:center;gap:10px;padding:12px 14px 8px}
-.tb-title{margin:0;flex:1;text-align:left;font-size:clamp(24px,3.4vw,34px);text-shadow:-2px -2px 0 #14122a,2px -2px 0 #14122a,-2px 2px 0 #14122a,2px 2px 0 #14122a,0 3px 0 #14122a}
+.tbx-title{margin:0;flex:1;text-align:left;font-size:clamp(24px,3.4vw,34px);text-shadow:-2px -2px 0 #14122a,2px -2px 0 #14122a,-2px 2px 0 #14122a,2px 2px 0 #14122a,0 3px 0 #14122a}
 .tb-icon{appearance:none;cursor:pointer;width:52px;height:46px;border-radius:8px;border:3px solid #14122a;background:#2f7cf0;color:#fff;font-size:24px;box-shadow:0 4px 0 #14122a;display:grid;place-items:center}
 .tb-x{background:#e0393b}
 .tb-code{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 14px 6px;background:#14122a;border-radius:8px;padding:8px 12px;font-size:16px}
@@ -660,7 +660,7 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
     </div></div>
     <div id="nickGate" hidden role="dialog" aria-modal="true" aria-labelledby="ngT"><form class="inv-card" id="ngForm"><b id="ngT">닉네임을 정해 주세요</b><p style="margin:0">채팅과 전투에서 다른 사람에게 보이는 이름이에요. 닉네임을 정해야 게임을 할 수 있어요.</p><input id="ngIn" maxlength="12" autocomplete="off" placeholder="1~12자" aria-label="닉네임"><p id="ngMsg" class="ng-msg" role="status"></p><button class="du-btn gold" type="submit">시작하기</button></form></div>
     <div id="teamBox" hidden role="dialog" aria-modal="true" aria-labelledby="tbT"><div class="tb-panel">
-      <div class="tb-head"><p class="tb-title" id="tbT">팀 구성</p><button class="tb-icon" id="tbSet" aria-label="설정">⚙</button><button class="tb-icon tb-x" id="tbClose" aria-label="닫기">✕</button></div>
+      <div class="tb-head"><p class="tbx-title" id="tbT">팀 구성</p><button class="tb-icon" id="tbSet" aria-label="설정">⚙</button><button class="tb-icon tb-x" id="tbClose" aria-label="닫기">✕</button></div>
       <div class="tb-code" id="tbCode" hidden><span>팀 코드 <b id="tbCodeTxt"></b></span><button class="tb-leave" id="tbLeave">팀 나가기</button></div>
       <div class="tb-body" id="tbBody"></div>
       <div class="tb-join" id="tbJoinRow" hidden><input id="tbJoinIn" maxlength="6" placeholder="팀 코드 6자리" autocomplete="off" aria-label="팀 코드"><button class="tb-blue" id="tbJoinGo">들어가기</button></div>
@@ -2294,6 +2294,11 @@ function renderTeamBox(){
   if(!rec.length)body.append(el('p','tb-empty','아직 함께한 팀원이 없어요.'));
   for(const x of rec){const u=B.uidByCode(x.code),online=!!(u&&u!==B.uid);
     body.append(tbRow(online?pres[u].nick:x.nick,x.code,online?(inTeam(u)?'팀원':ST_LABEL(pres[u].st)):'오프라인',u,online&&!inTeam(u)));}
+  /* 현재 접속 중인 모든 사람 */
+  const all=Object.keys(pres).filter(u=>u!==B.uid);
+  body.append(el('p','tb-sec','현재 접속 중 ('+all.length+'명)'));
+  if(!all.length)body.append(el('p','tb-empty','지금 접속한 다른 사람이 없어요.'));
+  for(const u of all)body.append(tbRow(pres[u].nick,pres[u].code,inTeam(u)?'팀원':ST_LABEL(pres[u].st),u,!inTeam(u)));
 }
 function openTeamBox(){renderTeamBox();document.getElementById('tbJoinRow').hidden=true;document.getElementById('teamBox').hidden=false;}
 {const tb=document.getElementById('teamBox');
