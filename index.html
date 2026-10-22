@@ -2324,6 +2324,103 @@ function openTeamBox(){renderTeamBox();document.getElementById('tbJoinRow').hidd
   document.getElementById('tbQuick').addEventListener('click',()=>{if(!need())return;window.BSO.quickJoin().then(made=>{toast(made?'자리가 있는 팀이 없어서 새 팀을 만들었어요':'팀에 들어갔어요');renderTeamBox();}).catch(e=>toast(e.message||'빠른 참가에 실패했어요'));});
   document.getElementById('tbLeave').addEventListener('click',()=>{if(window.BSO)window.BSO.leaveRoom();});
 }
+/* ===== 온라인 대전: 방장이 전투를 계산하고, 팀원은 조작을 보내고 화면을 받음 (WebRTC 데이터 채널) ===== */
+const NET={role:null,on:false,host:null,inputs:{},inQ:[],sendT:0,inT:0,ended:false,baseGrid:null,snapN:0,gotSnap:false};
+window.__NET=NET;window.__netDebug=()=>({state,startT:+(+startT).toFixed(2),n:fighters.length,b:bullets.length,f:fighters.map(f=>({x:Math.round(f.x),y:Math.round(f.y),label:f.label,remote:!!f.remote,ammo:+(+f.ammo).toFixed(2),hp:Math.round(f.hp),dead:!!f.dead,team:f.team})),me:fighters.indexOf(player)});
+const NET_SKIP=new Set(['isPlayer','remote','label','netUid','ai','st','idx','hero','tx','ty']);
+function netPrim(o,fi,skip){const r={};for(const k in o){if(skip&&skip.has(k))continue;const v=o[k],t=typeof v;
+  if(t==='number'){if(isFinite(v))r[k]=Math.round(v*100)/100;}else if(t==='boolean'||t==='string')r[k]=v;
+  else if(v&&t==='object'&&fi&&fi.has(v))r['@'+k]=fi.get(v);}return r;}
+function netRebuild(p){const o={};for(const k in p){if(k[0]==='@')o[k.slice(1)]=fighters[p[k]]||null;else o[k]=p[k];}return o;}
+function netGridDiff(){const d=[];if(!NET.baseGrid)return d;for(let r=0;r<grid.length;r++)for(let c=0;c<grid[r].length;c++)if(grid[r][c]!==NET.baseGrid[r][c])d.push([r,c,grid[r][c]]);return d;}
+function netGlobals(){const g={};const put=(k,v)=>{if(v==null||typeof v==='number'||typeof v==='boolean'||typeof v==='string')g[k]=v;else if(Array.isArray(v)&&v.every(x=>typeof x==='number'))g[k]=v.slice();};
+  put('score',score);put('timeLeft',timeLeft);put('startT',startT);put('countdown',countdown);put('roundWins',roundWins);put('round',round);put('stars',stars);put('zoneProg',zoneProg);put('gemT',gemT);put('goals',goals);return g;}
+function netSnapshot(){
+  const fi=new Map(fighters.map((f,i)=>[f,i]));
+  const list=(arr,cap)=>(arr||[]).slice(-cap).map(x=>netPrim(x,fi));
+  const S={t:'snap',st:state,F:fighters.map(f=>netPrim(f,fi,NET_SKIP)),B:list(bullets,90),Z:list(zones,30),M:list(summons,20),I:list(items,60),X:list(bombs,20),T:list(texts,20),
+    g:netGlobals(),ball:ball?netPrim(ball,fi):null,safes:Array.isArray(safes)?list(safes,4):null,res:lastRes?lastRes.res:null};
+  if(NET.snapN++%8===0)S.G=netGridDiff();
+  return S;
+}
+function netApply(S){
+  NET.gotSnap=true;
+  if(S.G&&NET.baseGrid){for(let r=0;r<grid.length;r++)grid[r]=NET.baseGrid[r].slice();for(const[r,c,v]of S.G)if(grid[r])grid[r][c]=v;}
+  S.F.forEach((p,i)=>{const f=fighters[i];if(!f)return;const tx=p.x,ty=p.y;delete p.x;delete p.y;
+    for(const k in p){if(k[0]==='@'){f[k.slice(1)]=fighters[p[k]]||null;delete p[k];}}
+    Object.assign(f,p);f.tx=tx;f.ty=ty;if(f.x==null||!isFinite(f.x)||Math.hypot(tx-f.x,ty-f.y)>220){f.x=tx;f.y=ty;}});
+  bullets=S.B.map(p=>{const b=netRebuild(p);b.hit=new Set();return b;});
+  zones=S.Z.map(netRebuild);summons=S.M.map(p=>{const q=netRebuild(p);q.ai=q.ai||{};return q;});
+  items=S.I.map(netRebuild);bombs=S.X.map(netRebuild);texts=S.T.map(netRebuild);
+  if(S.safes&&Array.isArray(safes))safes=S.safes.map(netRebuild);
+  ball=S.ball?netRebuild(S.ball):null;
+  const g=S.g||{};if('score'in g)score=g.score;if('timeLeft'in g)timeLeft=g.timeLeft;if('startT'in g)startT=g.startT;if('countdown'in g)countdown=g.countdown;
+  if('roundWins'in g)roundWins=g.roundWins;if('round'in g)round=g.round;if('stars'in g)stars=g.stars;if('zoneProg'in g)zoneProg=g.zoneProg;if('gemT'in g)gemT=g.gemT;if('goals'in g)goals=g.goals;
+  if(S.st==='play'&&state==='intro'){clearFlow();document.getElementById('intro').hidden=true;state='play';document.getElementById('exitBtn').hidden=false;}
+  if(!NET.ended&&(S.st==='over'||S.st==='replay'||S.st==='result')){NET.ended=true;netGuestEnd(S.res==='win'?'승리!':S.res==='lose'?'패배':'무승부');}
+}
+function netGuestEnd(txt){
+  state='over';document.getElementById('exitBtn').hidden=true;
+  const ban=document.getElementById('endBan');ban.textContent=txt;ban.className='endban '+(txt==='승리!'?'win':txt==='패배'?'lose':'draw');
+  flow(3500,()=>{NET.on=false;document.getElementById('toMenu').onclick();});
+}
+function netGuestStep(dt){
+  if(state==='play'&&player){playerControl();NET.inT-=dt;if(NET.inT<=0){NET.inT=1/30;
+    window.BSO.send({t:'in',mx:+player.mx.toFixed(3),my:+player.my.toFixed(3),face:+player.face.toFixed(3),ev:NET.inQ.splice(0)},NET.host);}}
+  const k=Math.min(1,dt*14);for(const f of fighters)if(f.tx!=null){f.x+=(f.tx-f.x)*k;f.y+=(f.ty-f.y)*k;}
+  for(const b of bullets)if(b.sp&&b.ang!=null&&isFinite(b.sp)){b.x+=Math.cos(b.ang)*b.sp*dt;b.y+=Math.sin(b.ang)*b.sp*dt;}
+  updateFx(dt);
+}
+const NET_FIRE=fire,NET_SUP=doSuper;
+fire=function(f,ang,d){if(NET.on&&NET.role==='guest'){if(f!==player||f.dead||f.ammo<1||!(state==='play'&&startT<=0))return false;NET.inQ.push({k:'f',a:+(+ang).toFixed(3),d:d==null?null:Math.round(d)});f.ammo-=1;f.face=ang;return true;}return NET_FIRE(f,ang,d);};
+doSuper=function(f,ang,d){if(NET.on&&NET.role==='guest'){if(f!==player||f.dead||f.superCharge<1||!(state==='play'&&startT<=0))return false;NET.inQ.push({k:'s',a:+(+ang).toFixed(3),d:d==null?null:Math.round(d)});f.superCharge=0;return true;}return NET_SUP(f,ang,d);};
+function netHostStep(dt){
+  if(state==='menu'){NET.on=false;return;}
+  if(state==='play'&&startT<=0){
+    for(const f of fighters){if(!f.remote)continue;const I=NET.inputs[f.netUid];if(!I)continue;
+      f.mx=Math.max(-1,Math.min(1,+I.mx||0));f.my=Math.max(-1,Math.min(1,+I.my||0));if(!busy(f)&&isFinite(I.face))f.face=+I.face;
+      for(const e of I.ev.splice(0)){if(f.dead)continue;const a=+e.a||0,d=e.d==null?null:+e.d;if(e.k==='f')NET_FIRE(f,a,d);else if(e.k==='s')NET_SUP(f,a,d);}}
+  }
+  NET.sendT-=dt;if(NET.sendT<=0){NET.sendT=1/15;try{window.BSO.send(netSnapshot());}catch(e){}}
+}
+window.__netStep=dt=>{if(!NET.on)return false;if(NET.role==='guest'){netGuestStep(dt);return true;}netHostStep(dt);return false;};
+function startOnline(d){
+  const B=window.BSO;
+  NET.role=d.host===B.uid?'host':'guest';NET.host=d.host;NET.on=true;NET.ended=false;NET.inputs={};NET.inQ=[];NET.snapN=0;NET.sendT=0;NET.inT=0;NET.gotSnap=false;
+  clearFlow();lastDuel=null;duelKind=null;p2=null;duelSel=null;
+  mapIdx=d.map;const m=MAPS[mapIdx];buildGrid(m);mode=MODES[m.mode];modeId=m.mode;
+  const humans=(d.roster||[]).slice(0,3),slots=[];
+  for(let i=0;i<3;i++){const h=humans[i];slots.push(h?{hero:HEROES[h.hero]?h.hero:rndHero(),uid:h.uid,nick:h.nick}:{hero:d.bots0[i-humans.length]||rndHero()});}
+  fighters=[];
+  slots.forEach((s,i)=>{const mine=s.uid===B.uid,f=makeFighter(s.hero,0,i,mine);if(s.uid){f.netUid=s.uid;f.label=mine?'나':s.nick;if(NET.role==='host'&&!mine)f.remote=true;}fighters.push(f);});
+  (d.bots1||[]).slice(0,3).forEach((h,i)=>fighters.push(makeFighter(HEROES[h]?h:rndHero(),1,i,false)));
+  player=fighters.find(f=>f.isPlayer)||fighters[0];
+  for(const f of fighters){initStatus(f);f.st={kills:0,dmg:0,deaths:0};if(!f.label)f.label=HEROES[f.hero].name;}
+  rec=[];killLog=[];actLog=[];RP=null;hlBest=null;hlPend=[];document.getElementById('rpTag').hidden=true;
+  tasks=[];marks=[];tempWalls=[];bullets=[];summons=[];items=[];parts=[];texts=[];feed=[];zones=[];bombs=[];score=[0,0];cloud=null;ball=null;
+  roundHold=null;document.getElementById('endBan').className='endban';timeLeft=mode.time||0;startT=2.6;shake=0;mode.init();
+  NET.baseGrid=grid.map(r=>r.slice());
+  camX=player.x;camY=player.y-viewHH*.22;state='intro';
+  menuEl.hidden=true;overEl.hidden=true;document.getElementById('exitBtn').hidden=true;
+  showIntro();
+}
+bso(B=>{
+  B.on('data',({from,data})=>{
+    if(!data||!NET.on)return;
+    if(data.t==='snap'&&NET.role==='guest'&&from===NET.host)netApply(data);
+    else if(data.t==='in'&&NET.role==='host'){const I=NET.inputs[from]||(NET.inputs[from]={ev:[]});I.mx=data.mx;I.my=data.my;I.face=data.face;if(Array.isArray(data.ev))I.ev.push(...data.ev.slice(0,10));if(I.ev.length>20)I.ev.splice(0,I.ev.length-20);}
+    else if(data.t==='bye'&&NET.role==='guest'&&from===NET.host){if(!NET.ended){NET.ended=true;NET.on=false;toast('방장이 경기를 나갔어요');document.getElementById('toMenu').onclick();}}
+    else if(data.t==='leave'&&NET.role==='host'){const f=fighters.find(x=>x.netUid===from);if(f){f.remote=false;toast((f.label||'팀원')+'님이 나가서 봇이 이어받아요');}}
+  });
+  B.on('room',r=>{
+    if(!NET.on)return;
+    if(NET.role==='guest'&&(!r||r.host!==NET.host)&&!NET.ended){NET.ended=true;NET.on=false;toast('방장과 연결이 끊겼어요');document.getElementById('toMenu').onclick();return;}
+    if(NET.role==='host'&&r){for(const f of fighters)if(f.remote&&!r.members[f.netUid]){f.remote=false;toast((f.label||'팀원')+'님이 나가서 봇이 이어받아요');}}
+  });
+});
+const netLeaveMsg=()=>{if(NET.on&&window.BSO){if(NET.role==='guest')window.BSO.send({t:'leave'},NET.host);else window.BSO.send({t:'bye'});}NET.on=false;};
+document.getElementById('exitBtn').addEventListener('click',netLeaveMsg);
+document.getElementById('toMenu').addEventListener('click',netLeaveMsg);
 /* 팀 준비 완료 → 모두 준비되면 함께 시작 */
 function teamReadyInfo(){const B=window.BSO,r=B&&B.room;if(!r)return null;const ids=Object.keys(r.members);if(ids.length<2)return null;return{r,me:!!(r.members[r.me]&&r.members[r.me].ready)};}
 function updatePlayBtn(){const i=teamReadyInfo(),b=document.getElementById('hPlay');b.textContent=i?(i.me?'준비 취소':'준비 완료'):'플레이';b.classList.toggle('ready-on',!!(i&&i.me));}
@@ -2343,12 +2440,27 @@ function startPublicMatch(){
   mmTimer=setTimeout(()=>{const h=mmWaiting();mmStop();if(h)toast('온라인 대전은 준비 중이라 봇과 시작해요');startGame();},8000);
 }
 document.getElementById('mmCancel').addEventListener('click',()=>{mmStop();toast('매칭을 취소했어요');});
-window.__teamPlay=()=>{const i=teamReadyInfo();if(!i)return startPublicMatch();window.BSO.setReady(!i.me).catch(e=>toast(e.message||'준비하지 못했어요'));};
+window.__teamPlay=()=>{const i=teamReadyInfo();if(!i)return startPublicMatch();window.BSO.setReady(!i.me,heroRand?'random':chosen).catch(e=>toast(e.message||'준비하지 못했어요'));};
 bso(B=>{
   B.on('room',()=>updatePlayBtn());
-  B.on('allReady',()=>{B.startTeam({mode:modeId,map:mapIdx,rand:mapRand||null}).catch(()=>{});});
+  B.on('allReady',()=>{
+    const r=B.room;if(!r)return;
+    resolveRandom();const m=MAPS[mapIdx],md=MODES[m.mode];
+    if(md.solo||m.mode==='duel'){toast('쇼다운·듀얼은 아직 함께 할 수 없어서 각자 봇과 시작해요');B.startTeam({mode:modeId,map:mapIdx,rand:mapRand||null}).catch(()=>{});return;}
+    const go=tries=>{
+      const rr=B.room;if(!rr)return;
+      const ids=Object.keys(rr.members).sort((a,b)=>(rr.members[a].j||0)-(rr.members[b].j||0)).slice(0,3);
+      const ok=ids.every(u=>u===B.uid||rr.connected[u]);
+      if(!ok&&tries<10){if(tries===0)toast('팀원과 연결하는 중이에요…');setTimeout(()=>go(tries+1),500);return;}
+      if(!ok){toast('연결되지 않은 팀원이 있어 각자 봇과 시작해요');B.startTeam({mode:modeId,map:mapIdx,rand:null}).catch(()=>{});return;}
+      const roster=ids.map(u=>{const h=u===B.uid?(heroRand?'random':chosen):rr.members[u].hero;return{uid:u,nick:rr.members[u].nick||'?',hero:HEROES[h]?h:rndHero()};});
+      B.startTeam({online:1,host:B.uid,map:mapIdx,roster,bots0:pick(3-roster.length),bots1:pick(3)}).catch(e=>toast(e.message||'시작하지 못했어요'));
+    };
+    go(0);
+  });
   B.on('start',d=>{
     if(state!=='menu')return;
+    if(d&&d.online){for(const id of['teamBox','onBox','chatBox','gMenu','profBox','setBox','invBox','mmBox']){const e=document.getElementById(id);if(e)e.hidden=true;}startOnline(d);return;}
     if(d&&MODES[d.mode])modeId=d.mode;
     if(d&&typeof d.map==='number'&&MAPS[d.map])mapIdx=d.map;
     mapRand=d&&d.rand?d.rand:null;duelSel=null;
@@ -2977,7 +3089,7 @@ function replayStep(dt){const R2=RP;R2.time=(R2.time||0)+dt;const t0=R2.frames[0
   camX=WW<viewHW*2?WW/2:Math.max(viewHW,Math.min(WW-viewHW,camX));camY=WH<viewHH*2?WH/2:Math.max(viewHH,Math.min(WH-viewHH,camY));
   if(R2.i>=R2.frames.length-1&&R2.time>=R2.frames[R2.frames.length-1].t-t0+.2){R2.done=true;}}
 function update(dt){
-  clock+=dt;
+  clock+=dt;if(window.__netStep&&window.__netStep(dt))return;
   if(netRole==='guest'&&duelKind==='guest'){netGuestTick(dt);updateFx(dt);return;}
   if(netRole==='host')netHostTick(dt);
   if(state==='replay'){if(RP&&!RP.done)replayStep(dt);updateFx(0);return;}
@@ -5447,7 +5559,7 @@ async function leaveRoom(already) {
   updatePresence(); publishRoom();
 }
 BSO.leaveRoom = () => leaveRoom();
-BSO.setReady = async v => { if (!roomId) return; await set(ref(db, 'rooms/' + roomId + '/members/' + me + '/ready'), !!v); };
+BSO.setReady = async (v, hero) => { if (!roomId) return; await update(ref(db, 'rooms/' + roomId + '/members/' + me), { ready: !!v, hero: hero || null }); };
 BSO.startTeam = async cfg => {
   if (!roomId || !isHost) return;
   const upd = { start: Object.assign({ n: Date.now() }, cfg || {}) };
