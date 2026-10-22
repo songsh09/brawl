@@ -131,6 +131,7 @@
 #mmBox{position:fixed;inset:0;z-index:38;display:grid;place-items:center;background:rgba(10,8,30,.6)}
 .inv-card,.inv-card *{box-sizing:border-box}
 .inv-card input,.inv-card button,.inv-card .du-row{width:100%;max-width:100%}
+#rjBox{position:fixed;inset:0;z-index:55;display:grid;place-items:center;background:rgba(10,8,30,.75)}
 #nickGate{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#1d1a3c;padding:16px}
 #ngIn{font:inherit;font-size:18px;text-align:center;color:#14122a;background:#fff;padding:10px;border-radius:8px;border:3px solid #14122a}
 .ng-msg{margin:0;min-height:1.2em;color:#ffd23f;font-size:14px}
@@ -728,6 +729,7 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
       <div class="tb-foot"><button class="tb-btn" id="tbCreate">생성</button><button class="tb-btn" id="tbJoin">참가</button><button class="tb-btn" id="tbShare">공유</button><button class="tb-btn tb-quick" id="tbQuick">빠른 참가</button></div>
     </div></div>
     <div id="mmBox" hidden role="dialog" aria-modal="true" aria-labelledby="mmT"><div class="inv-card"><b id="mmT">공개 매치</b><p class="mm-s" id="mmText" role="status" style="margin:0;font-weight:700;font-size:17px"></p><p style="margin:0;font-size:12px;opacity:.85">사람이 모자라면 봇이 채워져요</p><button class="du-btn" id="mmCancel">취소</button></div></div>
+    <div id="rjBox" hidden role="status"><div class="inv-card"><b>다시 접속하는 중</b><p style="margin:0">진행 중인 게임에 다시 접속하고 있어요…</p></div></div>
     <div id="invBox" hidden role="dialog" aria-modal="true" aria-labelledby="invT"><div class="inv-card"><b id="invT">팀 초대</b><p id="invText" style="margin:0"></p><div class="du-row"><button class="du-btn gold" id="invYes">수락</button><button class="du-btn" id="invNo">거절</button></div></div></div>
     <div class="toast" id="toast" role="status" hidden></div>
     <div class="modal" id="setBox" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
@@ -2450,6 +2452,7 @@ function netApply(S){
   if(!NET.ended&&(S.st==='over'||S.st==='replay'||S.st==='result')){NET.ended=true;netGuestEnd(S.res==='win'?'승리!':S.res==='lose'?'패배':'무승부');}
 }
 function netGuestEnd(txt){
+  netClearLive();
   state='over';document.getElementById('exitBtn').hidden=true;
   const ban=document.getElementById('endBan');ban.textContent=txt;ban.className='endban '+(txt==='승리!'?'win':txt==='패배'?'lose':'draw');
   flow(3500,()=>{NET.on=false;document.getElementById('toMenu').onclick();});
@@ -2465,7 +2468,8 @@ const NET_FIRE=fire,NET_SUP=doSuper;
 fire=function(f,ang,d){if(NET.on&&NET.role==='guest'){if(f!==player||f.dead||f.ammo<1||!(state==='play'&&startT<=0))return false;NET.inQ.push({k:'f',a:+(+ang).toFixed(3),d:d==null?null:Math.round(d)});f.ammo-=1;f.face=ang;return true;}return NET_FIRE(f,ang,d);};
 doSuper=function(f,ang,d){if(NET.on&&NET.role==='guest'){if(f!==player||f.dead||f.superCharge<1||!(state==='play'&&startT<=0))return false;NET.inQ.push({k:'s',a:+(+ang).toFixed(3),d:d==null?null:Math.round(d)});f.superCharge=0;return true;}return NET_SUP(f,ang,d);};
 function netHostStep(dt){
-  if(state==='menu'){NET.on=false;return;}
+  if(state==='menu'){NET.on=false;netClearLive();return;}
+  if(NET.liveN&&(state==='over'||state==='replay'))netClearLive();
   if(state==='play'&&startT<=0){
     for(const f of fighters){if(!f.remote)continue;const I=NET.inputs[f.netUid];if(!I)continue;
       f.mx=Math.max(-1,Math.min(1,+I.mx||0));f.my=Math.max(-1,Math.min(1,+I.my||0));if(!busy(f)&&isFinite(I.face))f.face=+I.face;
@@ -2474,8 +2478,8 @@ function netHostStep(dt){
   NET.sendT-=dt;if(NET.sendT<=0){NET.sendT=1/15;try{window.BSO.send(netSnapshot());}catch(e){}}
 }
 window.__netStep=dt=>{if(!NET.on)return false;if(NET.role==='guest'){netGuestStep(dt);return true;}netHostStep(dt);return false;};
-function startOnline(d){
-  const B=window.BSO;
+function startOnline(d,opt){
+  opt=opt||{};const B=window.BSO;
   NET.role=d.host===B.uid?'host':'guest';NET.host=d.host;NET.on=true;NET.ended=false;NET.inputs={};NET.inQ=[];NET.snapN=0;NET.sendT=0;NET.inT=0;NET.gotSnap=false;
   clearFlow();lastDuel=null;duelKind=null;p2=null;duelSel=null;
   mapIdx=d.map;const m=MAPS[mapIdx];buildGrid(m);mode=MODES[m.mode];modeId=m.mode;
@@ -2492,9 +2496,30 @@ function startOnline(d){
   NET.baseGrid=grid.map(r=>r.slice());
   camX=player.x;camY=player.y-viewHH*.22;state='intro';
   menuEl.hidden=true;overEl.hidden=true;document.getElementById('exitBtn').hidden=true;
+  try{localStorage.setItem('bs_live',JSON.stringify({room:B.room&&B.room.id,n:d.n,t:Date.now()}));}catch(e){}
+  if(NET.role==='host'){NET.liveN=d.n;B.setLive(d.n);}
+  if(opt.rejoin){/* 재접속: 인트로 없이 첫 화면 정보를 받으면 바로 전투 화면 */document.getElementById('intro').hidden=true;return;}
   showIntro();
 }
+const netClearLive=()=>{try{localStorage.removeItem('bs_live');}catch(e){}if(NET.role==='host'&&NET.liveN&&window.BSO){NET.liveN=null;window.BSO.setLive(null);}};
+/* 재접속: 진행 중인 온라인 게임이 있으면 홈 대신 게임으로 */
+async function netTryRejoin(B){
+  let L=null;try{L=JSON.parse(localStorage.getItem('bs_live')||'null');}catch(e){}
+  if(!L||!L.room||!L.n||Date.now()-(L.t||0)>10*60*1000){netClearLive();return;}
+  const box=document.getElementById('rjBox');box.hidden=false;
+  try{
+    const v=await B.peekRoom(L.room);const st=v&&v.start;
+    const ok=v&&v.live===L.n&&st&&st.online&&st.n===L.n&&st.host&&st.host!==B.uid&&v.host===st.host&&(st.roster||[]).some(x=>x.uid===B.uid);
+    if(!ok){netClearLive();box.hidden=true;return;}
+    await B.joinByCode(L.room);
+    for(const id of['teamBox','socialBox','chatBox','gMenu','profBox','setBox','invBox','mmBox']){const e=document.getElementById(id);if(e)e.hidden=true;}
+    startOnline(st,{rejoin:true});
+    const t0=Date.now(),wait=setInterval(()=>{if(NET.gotSnap||!NET.on){clearInterval(wait);box.hidden=true;if(NET.gotSnap)toast('게임에 다시 접속했어요');return;}
+      if(Date.now()-t0>12000){clearInterval(wait);box.hidden=true;NET.on=false;netClearLive();toast('다시 접속하지 못했어요');document.getElementById('toMenu').onclick();}},300);
+  }catch(e){box.hidden=true;netClearLive();}
+}
 bso(B=>{
+  B.on('ready',()=>{netTryRejoin(B);});
   B.on('data',({from,data})=>{
     if(!data||!NET.on)return;
     if(data.t==='snap'&&NET.role==='guest'&&from===NET.host)netApply(data);
@@ -2505,10 +2530,12 @@ bso(B=>{
   B.on('room',r=>{
     if(!NET.on)return;
     if(NET.role==='guest'&&(!r||r.host!==NET.host)&&!NET.ended){NET.ended=true;NET.on=false;toast('방장과 연결이 끊겼어요');document.getElementById('toMenu').onclick();return;}
-    if(NET.role==='host'&&r){for(const f of fighters)if(f.remote&&!r.members[f.netUid]){f.remote=false;toast((f.label||'팀원')+'님이 나가서 봇이 이어받아요');}}
+    if(NET.role==='host'&&r){for(const f of fighters){if(!f.netUid||f.isPlayer)continue;
+      if(f.remote&&!r.members[f.netUid]){f.remote=false;toast((f.label||'팀원')+'님이 나가서 봇이 이어받아요');}
+      else if(!f.remote&&r.members[f.netUid]&&(state==='play'||state==='intro')){f.remote=true;NET.inputs[f.netUid]={ev:[]};toast((f.label||'팀원')+'님이 다시 접속했어요');}}}
   });
 });
-const netLeaveMsg=()=>{if(NET.on&&window.BSO){if(NET.role==='guest')window.BSO.send({t:'leave'},NET.host);else window.BSO.send({t:'bye'});}NET.on=false;};
+const netLeaveMsg=()=>{if(NET.on)netClearLive();if(NET.on&&window.BSO){if(NET.role==='guest')window.BSO.send({t:'leave'},NET.host);else window.BSO.send({t:'bye'});}NET.on=false;};
 document.getElementById('exitBtn').addEventListener('click',netLeaveMsg);
 document.getElementById('toMenu').addEventListener('click',netLeaveMsg);
 /* 팀 준비 완료 → 모두 준비되면 함께 시작 */
@@ -5473,6 +5500,7 @@ try {
 } catch (e) { emit('status', '온라인 준비 실패: ' + (e.message || e)); }
 
 let me = null, myCode = null, st = '메뉴';
+let lastRoomVal = {};
 let roomId = null, hostUid = null, isHost = false, roomUnsub = null, lastMembers = {}, armedFor = '', lastStartN = null, firstSnap = true, allReadySent = false;
 const peers = {};
 
@@ -5551,7 +5579,7 @@ function publishRoom() {
   if (!roomId) { BSO.room = null; emit('room', null); return; }
   const conn = {};
   for (const u in peers) conn[u] = !!(peers[u].dc && peers[u].dc.readyState === 'open');
-  BSO.room = { id: roomId, host: hostUid, isHost, members: lastMembers, connected: conn, me };
+  BSO.room = { id: roomId, host: hostUid, isHost, members: lastMembers, connected: conn, me, live: lastRoomVal.live || null };
   emit('room', BSO.room);
 }
 const TEAM_MAX = 3;
@@ -5606,7 +5634,7 @@ function onRoom(id, s) {
   if (id !== roomId) return;
   if (!s.exists()) { emit('log', '팀이 사라졌어요'); leaveRoom(true); return; }
   const v = s.val() || {}, m = v.members || {};
-  lastMembers = m;
+  lastMembers = m; lastRoomVal = v;
   if (!m[me]) { emit('log', '팀에서 나왔어요'); leaveRoom(true); return; }
   if (v.host !== hostUid) {
     const prev = hostUid;
@@ -5651,6 +5679,8 @@ async function leaveRoom(already) {
 }
 BSO.leaveRoom = () => leaveRoom();
 BSO.myHero = 'random';
+BSO.peekRoom = async id => { await BSO.ready; const s = await get(ref(db, 'rooms/' + id)); return s.exists() ? s.val() : null; };
+BSO.setLive = async n => { if (!roomId || !isHost) return; await update(ref(db, 'rooms/' + roomId), { live: n || null }).catch(() => {}); };
 BSO.setHero = async h => { BSO.myHero = h || 'random'; if (roomId && lastMembers[me]) await update(ref(db, 'rooms/' + roomId + '/members/' + me), { hero: BSO.myHero }).catch(() => {}); };
 BSO.setReady = async (v, hero) => { if (!roomId) return; await update(ref(db, 'rooms/' + roomId + '/members/' + me), { ready: !!v, hero: hero || null }); };
 BSO.startTeam = async cfg => {
