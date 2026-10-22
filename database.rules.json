@@ -52,6 +52,13 @@
         ".write": "auth != null && ((!data.exists() && newData.child('from').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('from').val() === auth.uid || data.child('t').val() < now - 259200000)))",
         ".validate": "!newData.exists() || (newData.hasChildren(['from', 'nick', 'text', 't']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 200 && newData.child('nick').isString() && newData.child('nick').val().length <= 12 && newData.child('t').val() === now)"
       }
+    },
+    "usage": {
+      ".read": "auth != null",
+      "$month": {
+        ".write": "auth != null",
+        ".validate": "newData.isNumber() && (!data.exists() || newData.val() >= data.val())"
+      }
     }
   }
 }
