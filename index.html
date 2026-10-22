@@ -2607,7 +2607,7 @@ function netGuestEnd(S){const res=S.res,br=mode.solo?(S.rt==='1위'?'win':'lose'
   state='over';document.getElementById('exitBtn').hidden=true;
   const ban=document.getElementById('endBan');ban.textContent=txt;ban.className='endban '+(br||'draw');
   /* 방장과 같은 마지막 결과 화면 (다시 하기 없이 나가기만) */
-  flow(1800,()=>{ban.className='endban';lastRes={res,sub:S.rs||'',title:S.rt||null,spIdx:S.sp!=null?S.sp:fighters.indexOf(player)};document.getElementById('again').hidden=true;try{showResult();}catch(e){NET.on=false;document.getElementById('toMenu').onclick();}});
+  flow(1800,()=>{ban.className='endban';lastRes={res,sub:S.rs||'',title:S.rt||null,spIdx:S.sp!=null?S.sp:fighters.indexOf(player)};try{showResult();}catch(e){NET.on=false;document.getElementById('toMenu').onclick();}});
 }
 function netGuestStep(dt){
   if(state==='play'&&player){playerControl();NET.inT-=dt;if(NET.inT<=0){NET.inT=1/30;
@@ -2633,6 +2633,7 @@ window.__netStep=dt=>{if(!NET.on)return false;if(NET.role==='guest'){netGuestSte
 function startOnline(d,opt){
   opt=opt||{};const B=window.BSO;
   if(NET.ws){const w=NET.ws;NET.ws=null;try{w.close();}catch(e){}}NET.server=!!d.server;NET.reconn=0;
+  NET.lastD=d;NET.votes=new Set();NET.myVote=false;NET.rematch=false;NET.rematchSent=false;netAgainLabel(0);document.getElementById('again').hidden=false;
   NET.role=d.host===B.uid?'host':'guest';NET.host=d.host;NET.on=true;NET.ended=false;NET.inputs={};NET.inQ=[];NET.snapN=0;NET.sendT=0;NET.inT=0;NET.gotSnap=false;
   clearFlow();lastDuel=null;duelKind=null;p2=null;duelSel=null;
   mapIdx=d.map;const m=MAPS[mapIdx];buildGrid(m);mode=MODES[m.mode];modeId=m.mode;
@@ -2696,7 +2697,11 @@ function netOnData(from,data){
     if(!data||!NET.on)return;
     if(data.t==='snap'&&NET.role==='guest'&&from===NET.host)netApply(data);
     else if(data.t==='in'&&NET.role==='host'){const I=NET.inputs[from]||(NET.inputs[from]={ev:[]});I.mx=data.mx;I.my=data.my;I.face=data.face;if(Array.isArray(data.ev))I.ev.push(...data.ev.slice(0,10));if(I.ev.length>20)I.ev.splice(0,I.ev.length-20);}
-    else if(data.t==='bye'&&NET.role==='guest'&&from===NET.host){if(!NET.ended){NET.ended=true;NET.on=false;toast('방장이 경기를 나갔어요');document.getElementById('toMenu').onclick();}}
+    else if(data.t==='bye'&&NET.role==='guest'&&from===NET.host){if(!NET.ended){NET.ended=true;NET.on=false;toast('방장이 경기를 나갔어요');document.getElementById('toMenu').onclick();}
+      else{/* 결과 화면에서 누군가 나가면 모두 홈으로 */NET.on=false;toast('팀원이 나가서 홈으로 돌아왔어요');document.getElementById('toMenu').click();}}
+    else if(data.t==='again'&&NET.role==='host'&&netResult()){NET.votes.add(from);netAgainCheck();}
+    else if(data.t==='againN'&&NET.role==='guest'&&from===NET.host)netAgainLabel(data.n,data.of);
+    else if(data.t==='leave'&&NET.role==='host'&&netResult()){toast('팀원이 나가서 홈으로 돌아왔어요');document.getElementById('toMenu').click();}
     else if(data.t==='leave'&&NET.role==='host'){const f=fighters.find(x=>x.netUid===from);if(f){f.remote=false;if(state==='play')toast((f.label||'팀원')+'님이 나가서 봇이 이어받아요');}}
 }
 bso(B=>{
@@ -2708,6 +2713,17 @@ bso(B=>{
       else if(!f.remote&&r.members[f.netUid]&&(state==='play'||state==='intro')){f.remote=true;NET.inputs[f.netUid]={ev:[]};toast((f.label||'팀원')+'님이 다시 접속했어요');}}}
   });
 });
+/* 온라인 경기 결과: 모두 '다시 플레이'를 눌러야 같은 팀으로 다시 시작 · 한 명이라도 나가면 모두 홈 */
+const AGAIN_TXT='다시 플레이';
+function netResult(){return !!(NET.on&&!NET.server&&(NET.role==='guest'?NET.ended:(state==='over'||state==='replay')));}
+function netHumans(){const r=window.BSO&&window.BSO.room;return((NET.lastD&&NET.lastD.roster)||[]).map(h=>h.uid).filter(u=>!r||r.members[u]);}
+function netAgainLabel(n,of){document.getElementById('again').textContent=n?AGAIN_TXT+' ('+n+'/'+of+')':AGAIN_TXT;}
+function netAgainCheck(){const need=netHumans(),n=need.filter(u=>NET.votes.has(u)).length;window.BSO.send({t:'againN',n,of:need.length});netAgainLabel(n,need.length);
+  if(need.length&&n>=need.length&&!NET.rematchSent){NET.rematchSent=true;NET.rematch=true;const c=Object.assign({},NET.lastD);delete c.n;
+    window.BSO.startTeam(c).catch(e=>{NET.rematchSent=false;toast(e.message||'다시 시작하지 못했어요');});}}
+window.__netAgain=()=>{if(!netResult())return false;if(NET.myVote)return true;NET.myVote=true;NET.rematch=true;
+  if(NET.role==='host'){NET.votes.add(window.BSO.uid);netAgainCheck();}else netSend({t:'again'});
+  toast('모두 다시 플레이를 누르면 시작해요');return true;};
 const netLeaveMsg=()=>{if(NET.on)netClearLive();if(NET.on){if(NET.role==='guest')netSend({t:'leave'});else if(window.BSO&&!NET.server)window.BSO.send({t:'bye'});}NET.on=false;
   if(NET.ws){const w=NET.ws;NET.ws=null;setTimeout(()=>{try{w.close();}catch(e){}},100);}};
 /* ===== 서버 계산 (Cloud Run) · 사용량이 차거나 서버가 안 되면 방장 계산 ===== */
@@ -2797,7 +2813,7 @@ bso(B=>{
     })();
   });
   B.on('start',d=>{
-    if(state!=='menu')return;
+    if(state!=='menu'&&!(d&&d.online&&NET.rematch&&netResult()))return;
     if(d&&d.online){for(const id of['teamBox','onBox','chatBox','tcBox','gMenu','profBox','setBox','invBox','mmBox']){const e=document.getElementById(id);if(e)e.hidden=true;}startOnline(d);return;}
     if(d&&MODES[d.mode])modeId=d.mode;
     if(d&&typeof d.map==='number'&&MAPS[d.map])mapIdx=d.map;
@@ -5717,7 +5733,7 @@ document.getElementById('q').addEventListener('input',e=>{const q=e.target.value
 mapIdx=MAPS.findIndex(m=>m.mode===modeId);buildGrid(MAPS[mapIdx]);
 renderMenu();scr('scrHome');
 document.getElementById('start').onclick=startGame;
-document.getElementById('again').onclick=()=>{if(lastDuel&&(lastDuel.kind==='bot'||lastDuel.kind==='local'))startDuel(lastDuel.kind,lastDuel.o);else if(lastDuel){document.getElementById('toMenu').onclick();}else startGame();};
+document.getElementById('again').onclick=()=>{if(window.__netAgain&&window.__netAgain())return;if(lastDuel&&(lastDuel.kind==='bot'||lastDuel.kind==='local'))startDuel(lastDuel.kind,lastDuel.o);else if(lastDuel){document.getElementById('toMenu').onclick();}else startGame();};
 document.getElementById('exitBtn').onclick=()=>{const k=window.__tryHero;window.__tryHero=null;document.getElementById('toMenu').onclick();if(k&&HEROES[k]){openDetail(k);scr('scrDetail');}};/* 체험에서 나가면 그 브롤러 정보로 */
 document.getElementById('rpSkip').onclick=()=>{if(state==='replay'){clearFlow();showResult();}};
 document.getElementById('toMenu').onclick=()=>{clearFlow();netLeave();duelKind=null;p2=null;moveS2=aimS2=supS2=null;resize();document.getElementById('trainSup').hidden=true;if(curMap===TRAIN_MAP)buildGrid(MAPS[mapIdx]);document.getElementById('rpTag').hidden=true;document.getElementById('endBan').className='endban';document.getElementById('exitBtn').hidden=true;overEl.hidden=true;menuEl.hidden=false;{const wasLocal=lastDuel&&lastDuel.kind==='local';if(wasLocal){duelView='local';renderEvents();scr('scrPlay',true);document.getElementById('events').scrollLeft=0;}else scr('scrHome');}state='menu';fighters=[];bullets=[];summons=[];zones=[];bombs=[];player=null;};
