@@ -10,7 +10,7 @@
 .ch-notice{background:#14122a;border:3px solid #0a0920;border-radius:10px;padding:14px;display:grid;gap:10px;justify-items:start;color:#fff;font-size:15px}
 .ch-list{flex:1;min-height:0;overflow:auto;display:grid;align-content:start;gap:8px;padding:4px}
 .ch-msg{background:#3d8bff;border:3px solid #14122a;border-radius:10px;padding:6px 10px;display:grid;gap:2px;max-width:80%;justify-self:start;color:#fff}
-.ch-msg.mine{justify-self:end;background:#f5c518;color:#14122a}
+.ch-msg.mine{justify-self:end;background:#fff;color:#14122a}
 .ch-msg b{font-size:12px;opacity:.9}
 .ch-msg span{font-size:15px;word-break:break-word}
 .ch-form{display:flex;gap:8px}
@@ -791,7 +791,7 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
 .home .tile:active,.home .hmode:active,.home .hplay:active{transform:translateY(3px)!important;box-shadow:0 1px 0 #14122a!important;filter:brightness(.9)}
 .home .h-slot:not(.filled):active{transform:translate(-50%,calc(-50% + 3px)) skewX(-4deg)!important;filter:brightness(.9)}
 .home .h-slot.filled:active{filter:brightness(.9)}
-#hCanvas:active{filter:brightness(.92)}
+#hCanvas.press{filter:brightness(.92)}
 /* 채팅 말풍선 */
 .h-bubble{position:absolute;left:64%;top:22%;z-index:3;width:max-content;min-width:calc(var(--u)*6);max-width:calc(var(--u)*26);background:#fff;color:#14122a;font-family:var(--name);font-weight:900;font-size:calc(var(--u)*2.2);line-height:1.25;padding:calc(var(--u)*1.2) calc(var(--u)*2);border-radius:14px;border:3px solid #14122a;box-shadow:0 4px 0 rgba(20,18,42,.35);white-space:normal;word-break:break-word;text-align:center;pointer-events:none;animation:hbIn .2s ease-out both}
 .h-bubble::after{content:"";position:absolute;left:18%;bottom:-12px;width:18px;height:18px;background:#fff;border-right:3px solid #14122a;border-bottom:3px solid #14122a;transform:rotate(45deg) skew(10deg,10deg)}
@@ -835,7 +835,7 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
 .tc-msg.mine .tc-col{justify-items:end}
 .tc-nm{font-family:var(--name);font-size:12px;font-weight:900;opacity:.85}
 .tc-bub{background:#fff;color:#14122a;border-radius:10px;padding:7px 11px;font-family:var(--name);font-size:15px;font-weight:700;line-height:1.3;word-break:break-word}
-.tc-msg.mine .tc-bub{background:#ffe14a}
+.tc-msg.mine .tc-bub{background:#fff}
 .tc-form{display:flex;gap:8px;padding:10px 12px;background:rgba(0,0,0,.35)}
 #tcIn{flex:1;min-width:0;font:inherit;font-family:var(--name);font-size:16px;padding:10px 12px;border-radius:8px;border:3px solid #14122a;background:#fff!important;color:#14122a!important;-webkit-text-fill-color:#14122a;caret-color:#14122a}
 .tc-send{flex:none;width:52px;border-radius:8px;border:3px solid #14122a;background:linear-gradient(180deg,#ffe14a,#f5b818);box-shadow:0 3px 0 #14122a;display:grid;place-items:center;cursor:pointer;padding:0}
@@ -5705,7 +5705,14 @@ function renderHome(){if(duelSel)return renderHomeDuel();const c=document.getEle
   document.getElementById('hName').textContent=heroRand?'랜덤':HEROES[chosen].name;const RA=mapRand==='all'||mapRand==='team';document.getElementById('hModeName').textContent=mapRand==='all'?'랜덤':mapRand==='team'?'3대3 랜덤':MODES[mapRand||modeId].name;document.getElementById('hMapName').textContent=mapRand==='all'?'모든 모드 · 모든 맵':mapRand==='team'?'쇼다운 제외 모든 맵':mapRand?'랜덤 맵':MAPS[mapIdx].name;drawModeIcon(document.getElementById('hModeIc'),RA?'rand':(mapRand||modeId));const now=new Date(),mid=new Date(now);mid.setHours(24,0,0,0);const mins=Math.floor((mid-now)/60000);document.getElementById('hTimer').textContent='신규 맵: '+(mins>=60?Math.floor(mins/60)+'시간':mins+'분');}
 document.getElementById('hInfo').onclick=()=>{if(duelSel)return openInfo('duel',duelSel.mi!=null?MAPS[duelSel.mi]:null);if(mapRand==='all'||mapRand==='team')return scr('scrPlay');if(mapRand)return openInfo(mapRand,null);openInfo(modeId,MAPS[mapIdx]);};
 document.getElementById('hBrawlers').onclick=()=>scr('scrHeroes');
-document.getElementById('hCanvas').onclick=()=>scr('scrHeroes');document.getElementById('hCanvas').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();scr('scrHeroes');}});
+/* 홈 브롤러: 모델 그림 위를 눌렀을 때만 브롤러 창 (빈 곳·그림자는 무시) */
+const onHeroPix=e=>{const c=document.getElementById('hCanvas'),r=c.getBoundingClientRect();if(!r.width||!r.height)return false;
+  const x=Math.floor((e.clientX-r.left)/r.width*c.width),y=Math.floor((e.clientY-r.top)/r.height*c.height);if(x<0||y<0||x>=c.width||y>=c.height)return false;
+  try{return c.getContext('2d').getImageData(x,y,1,1).data[3]>120;}catch(er){return true;}};
+document.getElementById('hCanvas').onclick=e=>{if(onHeroPix(e))scr('scrHeroes');};
+{const hc=document.getElementById('hCanvas'),up=()=>hc.classList.remove('press');
+  hc.addEventListener('mousemove',e=>{hc.style.cursor=onHeroPix(e)?'pointer':'default';});
+  hc.addEventListener('pointerdown',e=>{if(onHeroPix(e))hc.classList.add('press');});for(const ev of['pointerup','pointerleave','pointercancel'])hc.addEventListener(ev,up);}document.getElementById('hCanvas').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();scr('scrHeroes');}});
 document.getElementById('hMode').onclick=()=>scr('scrPlay');
 document.getElementById('hPlay').onclick=()=>(window.__teamPlay?window.__teamPlay():startGame());
 document.getElementById('lBack').onclick=()=>{if(!pickBack())scr('scrHome');};document.getElementById('dHome').onclick=()=>{pickFor=null;pickTitle();scr('scrHome');};document.getElementById('lHome').onclick=()=>{pickFor=null;pickTitle();scr('scrHome');};
