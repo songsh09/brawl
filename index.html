@@ -4163,7 +4163,7 @@ function drawHeroSprite(c,k,x,y,r,face,flash,z,alpha,walk,rot){/* (x,y)=발 위�
 function drawHeroSprite0(c,k,x,y,r,flash,z,alpha,fl,back,turn,walk,rot){const img=heroSprite(k,!!flash,back,turn),sc=r*3.1/SPR_S,S=SPR_S,Fy=SPR_H-S*.04;
   /* 모델은 자르지 않고 통째로 (방향별 그림은 미리 따로 그려 둠) · 걸으면 통통 튀며 좌우로 살짝 흔들림 */
   c.save();if(alpha!=null)c.globalAlpha*=alpha;c.translate(x,FLAT?y:y-(z||0));if(rot)c.rotate(rot);if(FLAT&&z>0){const k2=1+Math.min(.8,z/220);c.scale(k2,k2);}
-  if(walk!=null){const ph=Math.sin(walk);c.translate(0,-Math.abs(ph)*r*.18);c.rotate(ph*.07);}
+  if(walk!=null){if(k==='carl'){/* 칼: 다리 없이 광산 카트로 굴러감 → 튀거나 기울지 않고 살짝 덜컹임만 */c.translate(0,-Math.abs(Math.sin(walk*2.2))*r*.025);}else{const ph=Math.sin(walk);c.translate(0,-Math.abs(ph)*r*.18);c.rotate(ph*.07);}}
   c.scale(sc*fl,sc);c.drawImage(img,-SPR_W/2,-Fy);c.restore();}
 function drawFighterF(f){/* 한 기기 듀얼(가로): 각자 앉은 쪽을 향하게 — 보통 화면과 똑같은 모습을 브롤러 위치 기준으로 통째로 90도 돌림 */
     const RT=seatRot(f),rotW=fn=>{if(!RT)return fn();ctx.save();ctx.translate(f.x,f.y);ctx.rotate(RT);ctx.translate(-f.x,-f.y);fn();ctx.restore();};
