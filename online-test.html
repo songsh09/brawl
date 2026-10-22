@@ -25,7 +25,9 @@ input{font:inherit;font-size:16px;color:var(--dark);background:#fff;border:3px s
 .item small{opacity:.85}
 .code{font-family:ui-monospace,Menlo,monospace;letter-spacing:1px}
 #log{background:var(--dark);border-radius:8px;padding:8px 10px;min-height:70px;max-height:200px;overflow:auto;font-size:14px;display:grid;gap:4px;align-content:start}
-#log p{margin:0;word-break:break-word}
+#log p,.log2 p{margin:0;word-break:break-word}
+.log2{background:var(--dark);border-radius:8px;padding:8px 10px;min-height:70px;max-height:220px;overflow:auto;font-size:14px;display:grid;gap:4px;align-content:start}
+.log2 small{opacity:.7}
 #inviteBox{position:fixed;inset:0;display:grid;place-items:center;background:rgba(10,8,30,.6);padding:16px;z-index:10}
 #inviteBox .card{width:min(360px,100%)}
 [hidden]{display:none!important}
@@ -55,6 +57,13 @@ input{font:inherit;font-size:16px;color:var(--dark);background:#fff;border:3px s
   </div>
 
   <div class="card">
+    <h2>전체 채팅</h2>
+    <p class="help">접속한 모든 사람과 채팅해요. 메시지는 3일이 지나면 지워져요.</p>
+    <div id="chatLog" class="log2"></div>
+    <div class="row"><input id="chatIn" maxlength="200" placeholder="메시지" style="flex:1"><button id="chatSend">보내기</button></div>
+  </div>
+
+  <div class="card">
     <h2>내 방</h2>
     <div class="row"><button id="roomCreate">방 만들기</button><button class="alt" id="roomLeave" disabled>방 나가기</button></div>
     <div class="list" id="memberList"></div>
@@ -72,7 +81,7 @@ input{font:inherit;font-size:16px;color:var(--dark);background:#fff;border:3px s
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getDatabase, ref, set, remove, onValue, onChildAdded, onDisconnect, push, serverTimestamp, runTransaction, off } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import { getDatabase, ref, set, get, update, remove, onValue, onChildAdded, onDisconnect, push, serverTimestamp, runTransaction, query, orderByChild, startAt, endAt, limitToLast, limitToFirst } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBWaAux4CAp2vmRpObC7sVrF5j6ZDoPNis",
@@ -114,6 +123,7 @@ onAuthStateChanged(auth, async user => {
     await goOnline();
     listenPresence();
     listenInvites();
+    startChat();
     status('<span class="ok">연결됐어요.</span> 다른 기기에서도 이 페이지를 열어 보세요.');
   } catch (e) {
     status('<span class="bad">준비 중 오류:</span> ' + esc(e && e.message || e) + '<br>Firebase 보안 규칙을 붙여넣었는지 확인해 주세요.');
@@ -214,46 +224,119 @@ $('invYes').addEventListener('click', async () => {
   if (!inv) return;
   await remove(ref(db, 'invites/' + me + '/' + inv.key));
   await leaveRoom();
-  await joinRoom(inv.room, inv.from);
+  await joinRoom(inv.room).catch(e => status('<span class="bad">방에 들어가지 못했어요:</span> ' + esc(e.message)));
 });
 
-/* ---------- 방 · WebRTC (방장 중심 연결) ---------- */
-function listen(r, ev, fn) { const u = ev(r, fn); unsubs.push(u); return u; }
+/* ---------- 전체 채팅 (모든 접속자 · 3일 지나면 삭제) ---------- */
+const CHAT_KEEP = 3 * 24 * 60 * 60 * 1000;
+let chatStarted = false;
+function startChat() {
+  if (chatStarted) return; chatStarted = true;
+  const since = Date.now() - CHAT_KEEP;
+  onChildAdded(query(ref(db, 'chat'), orderByChild('t'), startAt(since), limitToLast(100)), s => addChat(s.val()));
+  // 3일 지난 메시지 정리 (누구나 지울 수 있게 규칙에서 허용)
+  get(query(ref(db, 'chat'), orderByChild('t'), endAt(since), limitToFirst(100))).then(snap => {
+    snap.forEach(c => { remove(c.ref).catch(() => {}); });
+  }).catch(() => {});
+}
+function addChat(m) {
+  if (!m || typeof m.text !== 'string') return;
+  const box = $('chatLog'), p = document.createElement('p');
+  const d = new Date(m.t || Date.now());
+  const time = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const b = document.createElement('b'); b.textContent = String(m.nick || '???').slice(0, 12) + (m.from === me ? ' (나)' : '');
+  const sm = document.createElement('small'); sm.textContent = ' ' + time;
+  const t = document.createElement('span'); t.textContent = ' ' + m.text.slice(0, 200);
+  p.append(b, sm, t); box.append(p); box.scrollTop = box.scrollHeight;
+}
+$('chatSend').addEventListener('click', async () => {
+  const v = $('chatIn').value.trim();
+  if (!nick()) { status('<span class="bad">채팅하려면 먼저 닉네임을 정해 주세요.</span>'); $('nickIn').focus(); return; }
+  if (!v || !me) return;
+  try { await push(ref(db, 'chat'), { from: me, nick: nick(), text: v.slice(0, 200), t: serverTimestamp() }); $('chatIn').value = ''; }
+  catch (e) { status('<span class="bad">채팅을 보내지 못했어요:</span> ' + esc(e.message)); }
+});
+$('chatIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('chatSend').click(); });
+
+/* ---------- 방 · WebRTC (방장 중심 연결 · 방장 위임) ---------- */
+let roomUnsub = null, lastMembers = {}, armedFor = '';
 async function createRoom() {
   await leaveRoom();
   const r = push(ref(db, 'rooms'));
-  roomId = r.key; hostUid = me; isHost = true;
-  await set(r, { host: me, t: serverTimestamp(), members: { [me]: { nick: nick() || '닉네임 없음' } } });
-  await onDisconnect(r).remove();
-  listen(ref(db, 'rooms/' + roomId + '/members'), onValue, s => {
-    const m = s.val() || {}; renderMembers(m);
+  await set(r, { host: me, t: serverTimestamp(), members: { [me]: { nick: nick() || '닉네임 없음', j: serverTimestamp() } } });
+  await enterRoom(r.key, true);
+  log('방을 만들었어요. 친구를 초대해 보세요.');
+}
+async function joinRoom(id) {
+  const mref = ref(db, 'rooms/' + id + '/members/' + me);
+  await set(mref, { nick: nick() || '닉네임 없음', j: serverTimestamp() });
+  await onDisconnect(mref).remove();
+  await enterRoom(id);
+  log('방에 들어왔어요. 방장과 연결하는 중…');
+}
+async function enterRoom(id, asHost) {
+  roomId = id; hostUid = asHost ? me : null; isHost = !!asHost; lastMembers = {}; armedFor = '';
+  roomUnsub = onValue(ref(db, 'rooms/' + id), s => onRoom(id, s));
+  roomUI(); updatePresence();
+}
+function successor(m) {
+  let best = null;
+  for (const u in m) if (u !== me && (!best || (m[u].j || 0) < (m[best].j || 0))) best = u;
+  return best;
+}
+async function armHostDisconnect(m) {
+  const rref = ref(db, 'rooms/' + roomId);
+  await onDisconnect(rref).cancel();
+  const next = successor(m);
+  if (next) {
+    await onDisconnect(ref(db, 'rooms/' + roomId + '/host')).set(next);
+    await onDisconnect(ref(db, 'rooms/' + roomId + '/members/' + me)).remove();
+  } else {
+    await onDisconnect(rref).remove();
+  }
+}
+function onRoom(id, s) {
+  if (id !== roomId) return;
+  if (!s.exists()) { log('방이 닫혔어요.'); leaveRoom(true); return; }
+  const v = s.val() || {}, m = v.members || {};
+  lastMembers = m;
+  if (!m[me]) { log('방에서 나와졌어요.'); leaveRoom(true); return; }
+  if (v.host !== hostUid) {
+    const prev = hostUid;
+    hostUid = v.host; isHost = hostUid === me;
+    for (const u in peers) closePeer(u);
+    if (prev) log((m[hostUid] ? m[hostUid].nick : '?') + '님이 새 방장이 됐어요.');
+    if (!isHost) guestConnect(hostUid);
+    armedFor = '';
+  }
+  if (isHost) {
     for (const u in m) if (u !== me && !peers[u]) hostConnect(u, m[u].nick);
     for (const u in peers) if (!m[u]) closePeer(u);
-  });
-  roomUI(); updatePresence(); log('방을 만들었어요. 친구를 초대해 보세요.');
+    const key = Object.keys(m).sort().join(',');
+    if (key !== armedFor) { armedFor = key; armHostDisconnect(m).catch(() => {}); }
+  }
+  renderMembers(m);
 }
-async function joinRoom(id, host) {
-  roomId = id; hostUid = host; isHost = false;
-  const mref = ref(db, 'rooms/' + id + '/members/' + me);
-  await set(mref, { nick: nick() || '닉네임 없음' });
-  await onDisconnect(mref).remove();
-  listen(ref(db, 'rooms/' + id), onValue, s => {
-    if (!s.exists()) { log('방장이 방을 닫았어요.'); leaveRoom(); return; }
-    renderMembers((s.val() || {}).members || {});
-  });
-  guestConnect(host);
-  roomUI(); updatePresence(); log('방에 들어왔어요. 방장과 연결하는 중…');
-}
-async function leaveRoom() {
+async function leaveRoom(already) {
   if (!roomId) return;
-  for (const u of unsubs.splice(0)) { try { u(); } catch (e) {} }
+  const id = roomId, wasHost = isHost, m = lastMembers;
+  if (roomUnsub) { roomUnsub(); roomUnsub = null; }
   for (const u in peers) closePeer(u);
-  try {
-    if (isHost) { await onDisconnect(ref(db, 'rooms/' + roomId)).cancel(); await remove(ref(db, 'rooms/' + roomId)); }
-    else { const mref = ref(db, 'rooms/' + roomId + '/members/' + me); await onDisconnect(mref).cancel(); await remove(mref); }
-    await remove(ref(db, 'signal/' + roomId + '/' + me));
-  } catch (e) {}
-  roomId = null; hostUid = null; isHost = false;
+  roomId = null; hostUid = null; isHost = false; armedFor = '';
+  if (!already) {
+    try {
+      const rref = ref(db, 'rooms/' + id);
+      await onDisconnect(rref).cancel();
+      if (wasHost) {
+        const next = successor(m);
+        if (next) await update(rref, { host: next, ['members/' + me]: null });
+        else await remove(rref);
+      } else {
+        await remove(ref(db, 'rooms/' + id + '/members/' + me));
+      }
+    } catch (e) {}
+  }
+  try { await remove(ref(db, 'signal/' + id + '/' + me)); } catch (e) {}
   $('memberList').textContent = ''; roomUI(); updatePresence();
 }
 function roomUI() {
@@ -266,71 +349,79 @@ function renderMembers(m) {
   const list = $('memberList'); list.textContent = '';
   for (const u in m) {
     const row = document.createElement('div'); row.className = 'item';
-    const p = peers[u];
-    const st = u === me ? '나' : u === hostUid && !isHost ? (p && p.dc && p.dc.readyState === 'open' ? '<span class="ok">방장 · 연결됨</span>' : '방장 · 연결 중…')
-      : (p && p.dc && p.dc.readyState === 'open' ? '<span class="ok">연결됨</span>' : isHost ? '연결 중…' : '');
+    const p = peers[u], open = p && p.dc && p.dc.readyState === 'open';
+    const role = u === hostUid ? '방장' : '';
+    const st = u === me ? (role ? '나 · 방장' : '나') : (role ? role + ' · ' : '') + (open ? '<span class="ok">연결됨</span>' : (isHost || u === hostUid) ? '연결 중…' : '');
     row.innerHTML = '<b>' + esc(m[u].nick) + '</b><small>' + st + '</small>';
     list.append(row);
   }
 }
 function newPeer(uid, nickName) {
   const pc = new RTCPeerConnection(ICE);
-  peers[uid] = { pc, dc: null, pend: [], nick: nickName || '?' };
+  peers[uid] = { pc, dc: null, pend: [], nick: nickName || '?', subs: [] };
   pc.addEventListener('connectionstatechange', () => {
     if (pc.connectionState === 'failed') log((peers[uid] && peers[uid].nick || '상대') + '님과 연결에 실패했어요 (네트워크 문제일 수 있어요).');
   });
   return pc;
 }
+function sub(uid, unsub) { if (peers[uid]) peers[uid].subs.push(unsub); else unsub(); }
 async function addCand(uid, c) {
   const p = peers[uid]; if (!p || !c) return;
   if (p.pc.remoteDescription) { try { await p.pc.addIceCandidate(c); } catch (e) {} } else p.pend.push(c);
 }
 async function flushCands(uid) { const p = peers[uid]; if (!p) return; for (const c of p.pend.splice(0)) { try { await p.pc.addIceCandidate(c); } catch (e) {} } }
 function wireDC(uid, dc) {
+  if (!peers[uid]) return;
   peers[uid].dc = dc;
-  dc.addEventListener('open', () => { log((peers[uid] && peers[uid].nick || '상대') + '님과 직접 연결됐어요.'); roomUI(); refreshMembers(); });
-  dc.addEventListener('close', () => { roomUI(); refreshMembers(); });
+  dc.addEventListener('open', () => { log((peers[uid] && peers[uid].nick || '상대') + '님과 직접 연결됐어요.'); roomUI(); renderMembers(lastMembers); });
+  dc.addEventListener('close', () => { roomUI(); renderMembers(lastMembers); });
   dc.addEventListener('message', e => {
     let m; try { m = JSON.parse(e.data); } catch (err) { return; }
     if (m.t === 'ping') dc.send(JSON.stringify({ t: 'pong', s: m.s }));
     else if (m.t === 'pong') log('지연 시간: ' + Math.round(performance.now() - m.s) + 'ms (왕복)');
     else if (m.t === 'msg' && typeof m.v === 'string') {
-      const who = String(m.n || peers[uid].nick).slice(0, 12), text = m.v.slice(0, 200);
+      const who = String(m.n || (peers[uid] && peers[uid].nick) || '?').slice(0, 12), text = m.v.slice(0, 200);
       log(who + ': ' + text);
       if (isHost) for (const u in peers) if (u !== uid && peers[u].dc && peers[u].dc.readyState === 'open') peers[u].dc.send(JSON.stringify({ t: 'msg', n: who, v: text }));
     }
   });
 }
-function refreshMembers() { if (roomId) onValue(ref(db, 'rooms/' + roomId + '/members'), s => renderMembers(s.val() || {}), { onlyOnce: true }); }
 async function hostConnect(uid, nickName) {
-  const base = 'signal/' + roomId + '/';
-  await remove(ref(db, base + me + '/' + uid));
+  const id = roomId, base = 'signal/' + id + '/';
   const pc = newPeer(uid, nickName);
+  await remove(ref(db, base + me + '/' + uid)).catch(() => {});
+  if (!peers[uid] || peers[uid].pc !== pc) return;
   wireDC(uid, pc.createDataChannel('game', { ordered: true }));
   pc.onicecandidate = e => { if (e.candidate) push(ref(db, base + me + '/' + uid + '/cand'), e.candidate.toJSON()); };
-  listen(ref(db, base + uid + '/' + me + '/answer'), onValue, async s => {
-    const a = s.val(); if (!a || pc.remoteDescription) return;
+  sub(uid, onValue(ref(db, base + uid + '/' + me + '/answer'), async s => {
+    const a = s.val(); if (!a || pc.remoteDescription || pc.signalingState !== 'have-local-offer') return;
     await pc.setRemoteDescription(a); flushCands(uid);
-  });
-  listen(ref(db, base + uid + '/' + me + '/cand'), onChildAdded, s => addCand(uid, s.val()));
+  }));
+  sub(uid, onChildAdded(ref(db, base + uid + '/' + me + '/cand'), s => addCand(uid, s.val())));
   await pc.setLocalDescription(await pc.createOffer());
-  await set(ref(db, base + me + '/' + uid + '/offer'), { type: 'offer', sdp: pc.localDescription.sdp });
+  await set(ref(db, base + me + '/' + uid + '/offer'), { type: 'offer', sdp: pc.localDescription.sdp, k: Date.now() });
 }
 async function guestConnect(host) {
-  const base = 'signal/' + roomId + '/';
-  await remove(ref(db, base + me + '/' + host));
+  const id = roomId, base = 'signal/' + id + '/';
   const pc = newPeer(host, (presence[host] && presence[host].nick) || '방장');
+  await remove(ref(db, base + me + '/' + host)).catch(() => {});
+  if (!peers[host] || peers[host].pc !== pc) return;
   pc.ondatachannel = e => wireDC(host, e.channel);
   pc.onicecandidate = e => { if (e.candidate) push(ref(db, base + me + '/' + host + '/cand'), e.candidate.toJSON()); };
-  listen(ref(db, base + host + '/' + me + '/offer'), onValue, async s => {
+  sub(host, onValue(ref(db, base + host + '/' + me + '/offer'), async s => {
     const o = s.val(); if (!o || pc.remoteDescription) return;
-    await pc.setRemoteDescription(o); flushCands(host);
+    await pc.setRemoteDescription({ type: 'offer', sdp: o.sdp }); flushCands(host);
     await pc.setLocalDescription(await pc.createAnswer());
     await set(ref(db, base + me + '/' + host + '/answer'), { type: 'answer', sdp: pc.localDescription.sdp });
-  });
-  listen(ref(db, base + host + '/' + me + '/cand'), onChildAdded, s => addCand(host, s.val()));
+  }));
+  sub(host, onChildAdded(ref(db, base + host + '/' + me + '/cand'), s => addCand(host, s.val())));
 }
-function closePeer(uid) { const p = peers[uid]; if (!p) return; try { p.dc && p.dc.close(); p.pc.close(); } catch (e) {} delete peers[uid]; roomUI(); }
+function closePeer(uid) {
+  const p = peers[uid]; if (!p) return;
+  for (const u of p.subs) { try { u(); } catch (e) {} }
+  try { p.dc && p.dc.close(); p.pc.close(); } catch (e) {}
+  delete peers[uid]; roomUI();
+}
 
 $('roomCreate').addEventListener('click', () => createRoom().catch(e => status('<span class="bad">방을 만들지 못했어요:</span> ' + esc(e.message))));
 $('roomLeave').addEventListener('click', () => { leaveRoom(); log('방에서 나왔어요.'); });
