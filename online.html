@@ -51,6 +51,9 @@
 .h-slot.filled{font-size:calc(var(--u)*1.6);font-family:var(--name);font-weight:900;color:#14122a;text-align:center;line-height:1.1;padding:2px;overflow:hidden;word-break:break-all}
 .ch-msg small{font-size:11px;opacity:.7}
 .pf-code{letter-spacing:3px}
+#nickGate{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#1d1a3c;padding:16px}
+#ngIn{font:inherit;font-size:18px;text-align:center;color:#14122a;background:#fff;padding:10px;border-radius:8px;border:3px solid #14122a}
+.ng-msg{margin:0;min-height:1.2em;color:#ffd23f;font-size:14px}
 </style>
 </head><body>
 <title>브롤스타즈</title>
@@ -630,6 +633,7 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
       <p class="full-title" id="onTitle">친구 · 접속 중 (<span id="onCount">0</span>)</p><button class="mclose full-x" data-close="onBox" aria-label="닫기"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></button>
       <div class="full-body" id="onList"></div>
     </div></div>
+    <div id="nickGate" hidden role="dialog" aria-modal="true" aria-labelledby="ngT"><form class="inv-card" id="ngForm"><b id="ngT">닉네임을 정해 주세요</b><p style="margin:0">채팅과 전투에서 다른 사람에게 보이는 이름이에요. 닉네임을 정해야 게임을 할 수 있어요.</p><input id="ngIn" maxlength="12" autocomplete="off" placeholder="1~12자" aria-label="닉네임"><p id="ngMsg" class="ng-msg" role="status"></p><button class="du-btn gold" type="submit">시작하기</button></form></div>
     <div id="invBox" hidden role="dialog" aria-modal="true" aria-labelledby="invT"><div class="inv-card"><b id="invT">팀 초대</b><p id="invText" style="margin:0"></p><div class="du-row"><button class="du-btn gold" id="invYes">수락</button><button class="du-btn" id="invNo">거절</button></div></div></div>
     <div class="toast" id="toast" role="status" hidden></div>
     <div class="modal" id="setBox" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
@@ -2103,6 +2107,12 @@ function sfx(kind,amt){if(!sfxOn||!AC||AC.state!=='running')return;const a=AC,t=
   document.getElementById('pfNick').addEventListener('click',()=>{ni.value=getNick();nf.hidden=false;ni.focus();});
   document.getElementById('nickCancel').addEventListener('click',()=>{nf.hidden=true;});
   nf.addEventListener('submit',e=>{e.preventDefault();const v=ni.value.trim();if(!v){toast('닉네임을 입력해 주세요');return;}setNick(v);renderNick();nf.hidden=true;toast('닉네임을 저장했어요');if(window.BSO&&window.BSO.setNick)window.BSO.setNick();});
+  /* 닉네임이 없으면 먼저 정하게 함 (정하기 전에는 게임 불가) */
+  {const gate=document.getElementById('nickGate'),gi=document.getElementById('ngIn'),gm=document.getElementById('ngMsg');
+    if(!getNick()){gate.hidden=false;setTimeout(()=>gi.focus(),50);}
+    document.getElementById('ngForm').addEventListener('submit',e=>{e.preventDefault();const v=gi.value.trim();
+      if(!v){gm.textContent='닉네임을 입력해 주세요';gi.focus();return;}
+      setNick(v.slice(0,12));renderNick();gate.hidden=true;if(window.BSO&&window.BSO.setNick)window.BSO.setNick();toast('반가워요, '+v.slice(0,12)+'님!');});}
 /* ---- 온라인: 친구 · 접속자 · 전체 채팅 · 초대 · 팀 (Firebase 모듈 window.BSO 사용) ---- */
 const chatLog=[];
 const needNick=()=>{toast('닉네임을 먼저 정해 주세요');document.getElementById('profBtn').click();document.getElementById('pfNick').click();};
