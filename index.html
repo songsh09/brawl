@@ -508,7 +508,6 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
 .rs-side{position:relative;display:flex;flex-direction:column;justify-content:center;padding:clamp(10px,2svh,24px) clamp(10px,2vw,24px);min-width:0}
 .rs-side.mine{background:linear-gradient(160deg,#4aa0ff,#2457c9);clip-path:polygon(0 0,100% 0,94% 100%,0 100%);padding-right:8%}
 .rs-side.theirs{background:linear-gradient(160deg,#e0455a,#8c1f33);margin-left:-6%;padding-left:8%}
-.result-scr.lose .rs-side.mine{background:linear-gradient(160deg,#5a6b8f,#2e3a5c)}
 .rs-head{position:absolute;left:clamp(12px,2vw,26px);top:clamp(6px,1.5svh,16px)}
 .rs-title{margin:0;font-size:clamp(34px,6vw,64px);font-style:italic;text-shadow:-3px -3px 0 #14122a,3px -3px 0 #14122a,-3px 3px 0 #14122a,3px 3px 0 #14122a,0 5px 0 #14122a}
 .result-scr.win .rs-title{color:#fff}.result-scr.lose .rs-title{color:#ff8a9a}
@@ -543,7 +542,6 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
 .home .cur{background:rgba(20,18,42,.55);border-radius:4px;padding:2px 16px 2px 2px;font-size:calc(var(--u)*2.6)}
 .pp{width:calc(var(--u)*3.2);height:calc(var(--u)*3.2);border-radius:50%;background:radial-gradient(circle at 40% 35%,#ff9ad8,#e03aa0);border:2px solid #14122a;display:grid;place-items:center}.pp svg{width:70%;height:70%}
 .h-left .deco:first-child{background:#2d3150;color:#fff}
-.h-right .news{background:#2f8ff0}
 
 .h-left,.h-right{top:calc(var(--u)*14);bottom:auto}
 .h-slot{position:absolute;top:50%;width:calc(var(--u)*7);height:calc(var(--u)*6.4);display:grid;place-items:center;background:rgba(255,255,255,.82);border:3px solid rgba(255,255,255,.95);border-radius:6px;color:#7a86a8;font-size:calc(var(--u)*4.2);transform:translate(-50%,-50%) skewX(-4deg);box-shadow:0 3px 0 rgba(20,18,42,.35)}
@@ -1752,10 +1750,14 @@ const MODES={
     this.win();},
   timeUp(){const d=stars[0]===stars[1]&&this.blueTeam>=0?(this.blueTeam===0?'win':'lose'):cmp(stars[0],stars[1]);endGame(d,'현상금 별 '+stars[0]+' : '+stars[1]);},/* 동점이면 파란 별을 가진 팀 승리 */
   draw(){const B=this.blue;if(!B||B.taken)return;const y=B.y+Math.sin(clock*3)*3;ctx.save();ctx.globalAlpha=.3;ctx.fillStyle='#5ab8ff';arc0(ctx,B.x,B.y+14,22);ctx.fill();ctx.globalAlpha=1;bountyStar(ctx,B.x,y-8,16,'#5ab8ff');ctx.restore();},
-  badge(f,x,y){const n=f.bounty||2,sz=6.5,gap=12;for(let i=0;i<n;i++)bountyStar(ctx,x+(i-(n-1)/2)*gap,y,sz,f.blueStar&&i===n-1?'#5ab8ff':'#ffd23f');},
+  /* 별 배치: 1~3개 한 줄 · 4개 2/2 · 5개 2/3 · 6개 3/3 · 7개 2/3/2(육각형)
+     파란 별: 2·4개는 맨 앞 별, 3개는 가운데 별, 5개 이상은 두 번째 줄 가운데 별 */
+  badge(f,x,y){const n=f.bounty||2,sz=6.5,gap=12,rh=10.5,rows=n<=3?[n]:n===4?[2,2]:n===5?[2,3]:n===6?[3,3]:[2,3,2];
+    const blue=!f.blueStar?-1:n<=2||n===4?0:n===3?1:rows[0]+Math.floor(rows[1]/2);let k=0;
+    rows.forEach((c,ri)=>{const yy=y-(rows.length-1-ri)*rh;for(let i=0;i<c;i++,k++)bountyStar(ctx,x+(i-(c-1)/2)*gap,yy,sz,k===blue?'#5ab8ff':'#ffd23f');});},
   aiCaution(f){return (f.bounty||2)>=5?1.3:1;},
   aiGoal(f){return{x:WW/2+rnd(6*TILE),y:WH/2+(baseTeam(f)===0?2:-2)*TILE+rnd(3*TILE)};},
-  hud(){return{l:stars[0],r:stars[1],sub:'현상금 별'};},
+  hud(){return{l:stars[0]+'/20',r:stars[1]+'/20',plain:true,sub:'현상금 별'};},
   label(f){return '';}},/* 현상금은 숫자 대신 별 그림 (badge) */
  zone:{name:'핫 존',desc:'가운데 구역 안에 있는 팀의 점령률이 올라가요. 두 팀이 같이 있으면 두 팀 다 올라가요. 100%를 먼저 채우면 승리해요.',time:150,
   init(){zoneProg=[0,0];},
@@ -2557,9 +2559,9 @@ function openTeamBox(){renderTeamBox();document.getElementById('tbJoinRow').hidd
   document.getElementById('tbJoinIn').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('tbJoinGo').click();});
   document.getElementById('tbShare').addEventListener('click',async()=>{if(!need())return;
     try{if(!window.BSO.room)await window.BSO.createRoom();}catch(e){toast(e.message||'팀을 만들지 못했어요');return;}
-    const code=window.BSO.room.id,url=location.origin+location.pathname+'?team='+code,text='브롤스타즈 팀 코드: '+code;
-    try{if(navigator.share){await navigator.share({title:'브롤스타즈 팀 초대',text,url});return;}}catch(e){if(e&&e.name==='AbortError')return;}
-    try{await navigator.clipboard.writeText(text+'\n'+url);toast('팀 코드와 링크를 복사했어요');}catch(e){toast('팀 코드: '+code);}
+    const code=window.BSO.room.id,url=location.origin+location.pathname+'?team='+code;
+    try{if(navigator.share){await navigator.share({url});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+    try{await navigator.clipboard.writeText(url);toast('팀 링크를 복사했어요');}catch(e){toast(url);}
     renderTeamBox();});
   document.getElementById('tbQuick').addEventListener('click',()=>{if(!need())return;window.BSO.quickJoin().then(made=>{toast(made?'자리가 있는 팀이 없어서 새 팀을 만들었어요':'팀에 들어갔어요');renderTeamBox();}).catch(e=>toast(e.message||'빠른 참가에 실패했어요'));});
   document.getElementById('tbLeave').addEventListener('click',()=>{if(window.BSO)window.BSO.leaveRoom();});
@@ -2574,12 +2576,12 @@ function netPrim(o,fi,skip){const r={};for(const k in o){if(skip&&skip.has(k))co
 function netRebuild(p){const o={};for(const k in p){if(k[0]==='@')o[k.slice(1)]=fighters[p[k]]||null;else o[k]=p[k];}return o;}
 function netGridDiff(){const d=[];if(!NET.baseGrid)return d;for(let r=0;r<grid.length;r++)for(let c=0;c<grid[r].length;c++)if(grid[r][c]!==NET.baseGrid[r][c])d.push([r,c,grid[r][c]]);return d;}
 function netGlobals(){const g={};const put=(k,v)=>{if(v==null||typeof v==='number'||typeof v==='boolean'||typeof v==='string')g[k]=v;else if(Array.isArray(v)&&v.every(x=>typeof x==='number'))g[k]=v.slice();};
-  put('score',score);put('timeLeft',timeLeft);put('startT',startT);put('countdown',countdown);put('roundWins',roundWins);put('round',round);put('stars',stars);put('zoneProg',zoneProg);put('gemT',gemT);put('goals',goals);return g;}
+  put('score',score);put('timeLeft',timeLeft);put('startT',startT);g.countdown=countdown?{team:countdown.team,t:Math.round(countdown.t*100)/100}:null;put('roundWins',roundWins);put('round',round);put('stars',stars);put('zoneProg',zoneProg);put('gemT',gemT);put('goals',goals);return g;}
 function netSnapshot(){
   const fi=new Map(fighters.map((f,i)=>[f,i]));
   const list=(arr,cap)=>(arr||[]).slice(-cap).map(x=>netPrim(x,fi));
   const S={t:'snap',st:state,F:fighters.map(f=>netPrim(f,fi,NET_SKIP)),B:list(bullets,90),Z:list(zones,30),M:list(summons,40),I:list(items,60),X:list(bombs,20),T:list(texts,20),
-    g:netGlobals(),ball:ball?netPrim(ball,fi):null,safes:Array.isArray(safes)?list(safes,4):null,cl:cloud?netPrim(cloud):null,res:lastRes?lastRes.res:null,rt:lastRes?lastRes.title||null:null};
+    g:netGlobals(),ball:ball?netPrim(ball,fi):null,safes:Array.isArray(safes)?list(safes,4):null,cl:cloud?netPrim(cloud):null,res:lastRes?lastRes.res:null,rt:lastRes?lastRes.title||null:null,rs:lastRes?lastRes.sub||null:null,sp:lastRes?lastRes.spIdx:null,ST:lastRes?fighters.map(f=>f.st?[f.st.kills,f.st.dmg,f.st.deaths]:null):null};
   if(NET.snapN++%8===0)S.G=netGridDiff();
   return S;
 }
@@ -2598,13 +2600,14 @@ function netApply(S){
   const g=S.g||{};if('score'in g)score=g.score;if('timeLeft'in g)timeLeft=g.timeLeft;if('startT'in g)startT=g.startT;if('countdown'in g)countdown=g.countdown;
   if('roundWins'in g)roundWins=g.roundWins;if('round'in g)round=g.round;if('stars'in g)stars=g.stars;if('zoneProg'in g)zoneProg=g.zoneProg;if('gemT'in g)gemT=g.gemT;if('goals'in g)goals=g.goals;
   if(S.st==='play'&&state==='intro'){clearFlow();document.getElementById('intro').hidden=true;state='play';document.getElementById('exitBtn').hidden=false;}
-  if(!NET.ended&&(S.st==='over'||S.st==='replay'||S.st==='result')){NET.ended=true;netGuestEnd(S.rt||(S.res==='win'?'승리!':S.res==='lose'?'패배':'무승부'),S.res);}
+  if(!NET.ended&&(S.st==='over'||S.st==='replay'||S.st==='result')){NET.ended=true;if(Array.isArray(S.ST))S.ST.forEach((v,i)=>{if(v&&fighters[i])fighters[i].st={kills:v[0],dmg:v[1],deaths:v[2]};});netGuestEnd(S);}
 }
-function netGuestEnd(txt,res){
+function netGuestEnd(S){const res=S.res,br=mode.solo?(S.rt==='1위'?'win':'lose'):res,txt=br==='win'?'승리!':br==='lose'?'패배':'무승부';
   netClearLive();
   state='over';document.getElementById('exitBtn').hidden=true;
-  const ban=document.getElementById('endBan');ban.textContent=txt;ban.className='endban '+(res==='win'||txt==='승리!'?'win':res==='lose'||txt==='패배'?'lose':'draw');
-  flow(3500,()=>{NET.on=false;document.getElementById('toMenu').onclick();});
+  const ban=document.getElementById('endBan');ban.textContent=txt;ban.className='endban '+(br||'draw');
+  /* 방장과 같은 마지막 결과 화면 (다시 하기 없이 나가기만) */
+  flow(1800,()=>{ban.className='endban';lastRes={res,sub:S.rs||'',title:S.rt||null,spIdx:S.sp!=null?S.sp:fighters.indexOf(player)};document.getElementById('again').hidden=true;try{showResult();}catch(e){NET.on=false;document.getElementById('toMenu').onclick();}});
 }
 function netGuestStep(dt){
   if(state==='play'&&player){playerControl();NET.inT-=dt;if(NET.inT<=0){NET.inT=1/30;
@@ -2694,7 +2697,7 @@ function netOnData(from,data){
     if(data.t==='snap'&&NET.role==='guest'&&from===NET.host)netApply(data);
     else if(data.t==='in'&&NET.role==='host'){const I=NET.inputs[from]||(NET.inputs[from]={ev:[]});I.mx=data.mx;I.my=data.my;I.face=data.face;if(Array.isArray(data.ev))I.ev.push(...data.ev.slice(0,10));if(I.ev.length>20)I.ev.splice(0,I.ev.length-20);}
     else if(data.t==='bye'&&NET.role==='guest'&&from===NET.host){if(!NET.ended){NET.ended=true;NET.on=false;toast('방장이 경기를 나갔어요');document.getElementById('toMenu').onclick();}}
-    else if(data.t==='leave'&&NET.role==='host'){const f=fighters.find(x=>x.netUid===from);if(f){f.remote=false;toast((f.label||'팀원')+'님이 나가서 봇이 이어받아요');}}
+    else if(data.t==='leave'&&NET.role==='host'){const f=fighters.find(x=>x.netUid===from);if(f){f.remote=false;if(state==='play')toast((f.label||'팀원')+'님이 나가서 봇이 이어받아요');}}
 }
 bso(B=>{
   B.on('room',r=>{
@@ -2741,6 +2744,7 @@ window.__serverLeave=uid=>{const f=fighters.find(x=>x.netUid===uid);if(f)f.remot
 window.__serverState=()=>({state,on:NET.on,res:lastRes?lastRes.res:null});
 document.getElementById('exitBtn').addEventListener('click',netLeaveMsg);
 document.getElementById('toMenu').addEventListener('click',netLeaveMsg);
+document.getElementById('toMenu').addEventListener('click',()=>{document.getElementById('again').hidden=false;});
 /* 팀 준비 완료 → 모두 준비되면 함께 시작 */
 function teamReadyInfo(){const B=window.BSO,r=B&&B.room;if(!r)return null;const ids=Object.keys(r.members);if(ids.length<2)return null;return{r,me:!!(r.members[r.me]&&r.members[r.me].ready)};}
 function updatePlayBtn(){const i=teamReadyInfo(),b=document.getElementById('hPlay');b.textContent=i?(i.me?'준비 취소':'준비 완료'):'플레이';b.classList.toggle('ready-on',!!(i&&i.me));}
@@ -3408,7 +3412,8 @@ function endGame(res,sub,title){
   t.style.color=res==='win'?'var(--gold)':res==='lose'?'var(--red)':'var(--ink)';
   document.getElementById('resScore').textContent=sub||'';
   document.getElementById('resSub').textContent=mode.name+' · '+dn(chosen)+' · '+curMap.name;
-  const ban=document.getElementById('endBan');ban.textContent=res==='win'?'승리!':res==='lose'?'패배':'무승부';ban.className='endban '+(res||'draw');
+  const br=mode.solo?(title==='1위'?'win':'lose'):res;/* 쇼다운: 끝날 때는 1위만 승리, 마지막 결과 화면에서만 순위 기준 */
+  const ban=document.getElementById('endBan');ban.textContent=br==='win'?'승리!':br==='lose'?'패배':'무승부';ban.className='endban '+(br||'draw');
   const sp=starPlayer(res);lastRes={res,sub,title,spIdx:fighters.indexOf(sp)};
   flow(1800,()=>{ban.className='endban';if(startReplay(sp)){const wait=()=>{if(state!=='replay')return;if(RP&&RP.done)return showResult();flow(150,wait);};flow(400,wait);}else showResult();});
 }
@@ -3530,7 +3535,7 @@ function drawSummonFront(c,k,x,y,S){const O='#14122a',lw=Math.max(1.2,S*.05);c.s
   c.restore();}
 /* 메뉴 그림에 쓰는 글자를 Black Han Sans 모양 그대로 도형으로 옮김: 글꼴을 받았는지와 상관없이 항상 같은 모양
    [글자 폭, 모양] — 글자 크기 1, 기준선 0. 여기 없는 글자는 쓰지 않음 */
-const GLYPHS={"봇":[0.84,"M0.514 -0.389H0.78V-0.258H0.06V-0.389H0.326V-0.428H0.08V-0.752H0.268V-0.709H0.575V-0.752H0.763V-0.428H0.514ZM0.268 -0.586V-0.551H0.575V-0.586ZM0.514 -0.225Q0.518 -0.184 0.551 -0.163Q0.584 -0.142 0.6365 -0.136Q0.689 -0.13 0.77 -0.13L0.75 0Q0.525 0 0.42 -0.066Q0.315 0 0.09 0L0.07 -0.13Q0.151 -0.13 0.2035 -0.136Q0.256 -0.142 0.289 -0.163Q0.322 -0.184 0.326 -0.225Z"],"전":[0.815,"M0.567 -0.265V-0.452H0.501V-0.602H0.567V-0.76H0.754V-0.265ZM0.269 -0.413Q0.229 -0.373 0.1775 -0.3515Q0.126 -0.33 0.07 -0.33L0.04 -0.48Q0.091 -0.48 0.1255 -0.5085Q0.16 -0.537 0.171 -0.602H0.055V-0.752H0.481V-0.602H0.366Q0.377 -0.537 0.4115 -0.5085Q0.446 -0.48 0.497 -0.48L0.467 -0.33Q0.411 -0.33 0.3595 -0.3515Q0.308 -0.373 0.269 -0.413ZM0.263 -0.15H0.755V0H0.075V-0.285H0.263Z"],"한":[0.837,"M0.379 -0.72V-0.78H0.191V-0.72H0.06V-0.598H0.51V-0.72ZM0.762 -0.76H0.574V-0.246H0.762V-0.421H0.837V-0.571H0.762ZM0.238 -0.58Q0.162 -0.58 0.116 -0.539Q0.07 -0.498 0.07 -0.43Q0.07 -0.362 0.116 -0.321Q0.162 -0.28 0.238 -0.28H0.332Q0.408 -0.28 0.454 -0.321Q0.5 -0.362 0.5 -0.43Q0.5 -0.498 0.454 -0.539Q0.408 -0.58 0.332 -0.58ZM0.262 -0.406Q0.251 -0.406 0.244 -0.413Q0.237 -0.42 0.237 -0.431Q0.237 -0.442 0.244 -0.449Q0.251 -0.456 0.262 -0.456H0.309Q0.32 -0.456 0.327 -0.449Q0.334 -0.442 0.334 -0.431Q0.334 -0.42 0.327 -0.413Q0.32 -0.406 0.309 -0.406ZM0.08 -0.246V0L0.762 -0.001V-0.141H0.268V-0.246Z"],"기":[0.82,"M0.572 -0.76V0H0.76V-0.76ZM0.07 -0.03Q0.193 -0.03 0.2875 -0.1Q0.382 -0.17 0.4345 -0.2995Q0.487 -0.429 0.487 -0.602V-0.752H0.06V-0.602H0.299Q0.299 -0.447 0.259 -0.3525Q0.219 -0.258 0.162 -0.219Q0.105 -0.18 0.05 -0.18Z"],"온":[0.84,"M0.78 -0.389V-0.248H0.06V-0.389H0.326V-0.426H0.247Q0.172 -0.426 0.126 -0.471Q0.08 -0.516 0.08 -0.59Q0.08 -0.664 0.126 -0.709Q0.172 -0.754 0.247 -0.754H0.593Q0.668 -0.754 0.714 -0.709Q0.76 -0.664 0.76 -0.59Q0.76 -0.516 0.714 -0.471Q0.668 -0.426 0.593 -0.426H0.514V-0.389ZM0.268 -0.591Q0.268 -0.581 0.275 -0.574Q0.282 -0.567 0.292 -0.567H0.548Q0.559 -0.567 0.5655 -0.574Q0.572 -0.581 0.572 -0.591Q0.572 -0.601 0.5655 -0.6075Q0.559 -0.614 0.548 -0.614H0.292Q0.281 -0.614 0.2745 -0.6075Q0.268 -0.601 0.268 -0.591ZM0.268 -0.208V-0.15H0.76V0H0.08V-0.208Z"],"라":[0.835,"M0.76 -0.76H0.572V0H0.76V-0.321H0.835V-0.471H0.76ZM0.485 -0.75H0.06V-0.6H0.298V-0.47H0.06V-0.03H0.505V-0.18H0.248V-0.32H0.485Z"],"인":[0.823,"M0.574 -0.76V-0.226H0.762V-0.76ZM0.284 -0.75Q0.173 -0.75 0.1165 -0.6915Q0.06 -0.633 0.06 -0.518Q0.06 -0.403 0.1165 -0.3445Q0.173 -0.286 0.284 -0.286Q0.395 -0.286 0.4515 -0.3445Q0.508 -0.403 0.508 -0.518Q0.508 -0.633 0.4515 -0.6915Q0.395 -0.75 0.284 -0.75ZM0.284 -0.6Q0.321 -0.6 0.321 -0.562V-0.474Q0.321 -0.436 0.284 -0.436Q0.247 -0.436 0.247 -0.474V-0.562Q0.247 -0.6 0.284 -0.6ZM0.08 -0.246V0H0.763V-0.151H0.268V-0.246Z"]," ":[0.3,""],"?":[0.421,"M0.19 -0.178Q0.23 -0.178 0.2565 -0.152Q0.283 -0.126 0.283 -0.084Q0.283 -0.042 0.2565 -0.016Q0.23 0.01 0.19 0.01Q0.15 0.01 0.123 -0.017Q0.096 -0.044 0.096 -0.084Q0.096 -0.126 0.123 -0.152Q0.15 -0.178 0.19 -0.178ZM0.401 -0.573Q0.401 -0.537 0.3965 -0.508Q0.392 -0.479 0.3825 -0.453Q0.373 -0.427 0.3575 -0.4015Q0.342 -0.376 0.321 -0.347Q0.294 -0.311 0.281 -0.2855Q0.268 -0.26 0.268 -0.225H0.108Q0.108 -0.259 0.1125 -0.2855Q0.117 -0.312 0.1255 -0.335Q0.134 -0.358 0.147 -0.379Q0.16 -0.4 0.176 -0.423Q0.191 -0.444 0.201 -0.461Q0.211 -0.478 0.218 -0.4945Q0.225 -0.511 0.228 -0.529Q0.231 -0.547 0.231 -0.569V-0.57Q0.231 -0.59 0.21 -0.59Q0.19 -0.59 0.19 -0.57V-0.516L0.03 -0.506L0.02 -0.573Q0.02 -0.657 0.07 -0.7035Q0.12 -0.75 0.21 -0.75Q0.301 -0.75 0.351 -0.7035Q0.401 -0.657 0.401 -0.573Z"]};
+const GLYPHS={"봇":[0.84,"M0.514 -0.389H0.78V-0.258H0.06V-0.389H0.326V-0.428H0.08V-0.752H0.268V-0.709H0.575V-0.752H0.763V-0.428H0.514ZM0.268 -0.586V-0.551H0.575V-0.586ZM0.514 -0.225Q0.518 -0.184 0.551 -0.163Q0.584 -0.142 0.6365 -0.136Q0.689 -0.13 0.77 -0.13L0.75 0Q0.525 0 0.42 -0.066Q0.315 0 0.09 0L0.07 -0.13Q0.151 -0.13 0.2035 -0.136Q0.256 -0.142 0.289 -0.163Q0.322 -0.184 0.326 -0.225Z"],"전":[0.815,"M0.567 -0.265V-0.452H0.501V-0.602H0.567V-0.76H0.754V-0.265ZM0.269 -0.413Q0.229 -0.373 0.1775 -0.3515Q0.126 -0.33 0.07 -0.33L0.04 -0.48Q0.091 -0.48 0.1255 -0.5085Q0.16 -0.537 0.171 -0.602H0.055V-0.752H0.481V-0.602H0.366Q0.377 -0.537 0.4115 -0.5085Q0.446 -0.48 0.497 -0.48L0.467 -0.33Q0.411 -0.33 0.3595 -0.3515Q0.308 -0.373 0.269 -0.413ZM0.263 -0.15H0.755V0H0.075V-0.285H0.263Z"],"한":[0.837,"M0.379 -0.72V-0.78H0.191V-0.72H0.06V-0.598H0.51V-0.72ZM0.762 -0.76H0.574V-0.246H0.762V-0.421H0.837V-0.571H0.762ZM0.238 -0.58Q0.162 -0.58 0.116 -0.539Q0.07 -0.498 0.07 -0.43Q0.07 -0.362 0.116 -0.321Q0.162 -0.28 0.238 -0.28H0.332Q0.408 -0.28 0.454 -0.321Q0.5 -0.362 0.5 -0.43Q0.5 -0.498 0.454 -0.539Q0.408 -0.58 0.332 -0.58ZM0.262 -0.406Q0.251 -0.406 0.244 -0.413Q0.237 -0.42 0.237 -0.431Q0.237 -0.442 0.244 -0.449Q0.251 -0.456 0.262 -0.456H0.309Q0.32 -0.456 0.327 -0.449Q0.334 -0.442 0.334 -0.431Q0.334 -0.42 0.327 -0.413Q0.32 -0.406 0.309 -0.406ZM0.08 -0.246V0L0.762 -0.001V-0.141H0.268V-0.246Z"],"기":[0.82,"M0.572 -0.76V0H0.76V-0.76ZM0.07 -0.03Q0.193 -0.03 0.2875 -0.1Q0.382 -0.17 0.4345 -0.2995Q0.487 -0.429 0.487 -0.602V-0.752H0.06V-0.602H0.299Q0.299 -0.447 0.259 -0.3525Q0.219 -0.258 0.162 -0.219Q0.105 -0.18 0.05 -0.18Z"],"온":[0.84,"M0.78 -0.389V-0.248H0.06V-0.389H0.326V-0.426H0.247Q0.172 -0.426 0.126 -0.471Q0.08 -0.516 0.08 -0.59Q0.08 -0.664 0.126 -0.709Q0.172 -0.754 0.247 -0.754H0.593Q0.668 -0.754 0.714 -0.709Q0.76 -0.664 0.76 -0.59Q0.76 -0.516 0.714 -0.471Q0.668 -0.426 0.593 -0.426H0.514V-0.389ZM0.268 -0.591Q0.268 -0.581 0.275 -0.574Q0.282 -0.567 0.292 -0.567H0.548Q0.559 -0.567 0.5655 -0.574Q0.572 -0.581 0.572 -0.591Q0.572 -0.601 0.5655 -0.6075Q0.559 -0.614 0.548 -0.614H0.292Q0.281 -0.614 0.2745 -0.6075Q0.268 -0.601 0.268 -0.591ZM0.268 -0.208V-0.15H0.76V0H0.08V-0.208Z"],"라":[0.835,"M0.76 -0.76H0.572V0H0.76V-0.321H0.835V-0.471H0.76ZM0.485 -0.75H0.06V-0.6H0.298V-0.47H0.06V-0.03H0.505V-0.18H0.248V-0.32H0.485Z"],"인":[0.823,"M0.574 -0.76V-0.226H0.762V-0.76ZM0.284 -0.75Q0.173 -0.75 0.1165 -0.6915Q0.06 -0.633 0.06 -0.518Q0.06 -0.403 0.1165 -0.3445Q0.173 -0.286 0.284 -0.286Q0.395 -0.286 0.4515 -0.3445Q0.508 -0.403 0.508 -0.518Q0.508 -0.633 0.4515 -0.6915Q0.395 -0.75 0.284 -0.75ZM0.284 -0.6Q0.321 -0.6 0.321 -0.562V-0.474Q0.321 -0.436 0.284 -0.436Q0.247 -0.436 0.247 -0.474V-0.562Q0.247 -0.6 0.284 -0.6ZM0.08 -0.246V0H0.763V-0.151H0.268V-0.246Z"]," ":[0.3,""],"?":[0.421,"M0.19 -0.178Q0.23 -0.178 0.2565 -0.152Q0.283 -0.126 0.283 -0.084Q0.283 -0.042 0.2565 -0.016Q0.23 0.01 0.19 0.01Q0.15 0.01 0.123 -0.017Q0.096 -0.044 0.096 -0.084Q0.096 -0.126 0.123 -0.152Q0.15 -0.178 0.19 -0.178ZM0.401 -0.573Q0.401 -0.537 0.3965 -0.508Q0.392 -0.479 0.3825 -0.453Q0.373 -0.427 0.3575 -0.4015Q0.342 -0.376 0.321 -0.347Q0.294 -0.311 0.281 -0.2855Q0.268 -0.26 0.268 -0.225H0.108Q0.108 -0.259 0.1125 -0.2855Q0.117 -0.312 0.1255 -0.335Q0.134 -0.358 0.147 -0.379Q0.16 -0.4 0.176 -0.423Q0.191 -0.444 0.201 -0.461Q0.211 -0.478 0.218 -0.4945Q0.225 -0.511 0.228 -0.529Q0.231 -0.547 0.231 -0.569V-0.57Q0.231 -0.59 0.21 -0.59Q0.19 -0.59 0.19 -0.57V-0.516L0.03 -0.506L0.02 -0.573Q0.02 -0.657 0.07 -0.7035Q0.12 -0.75 0.21 -0.75Q0.301 -0.75 0.351 -0.7035Q0.401 -0.657 0.401 -0.573Z"],"오":[0.84,"M0.295 -0.311Q0.228 -0.311 0.177 -0.3385Q0.126 -0.366 0.098 -0.416Q0.07 -0.466 0.07 -0.532Q0.07 -0.597 0.098 -0.647Q0.126 -0.697 0.177 -0.7245Q0.228 -0.752 0.295 -0.752H0.545Q0.612 -0.752 0.663 -0.7245Q0.714 -0.697 0.742 -0.647Q0.77 -0.597 0.77 -0.532Q0.77 -0.466 0.742 -0.416Q0.714 -0.366 0.663 -0.3385Q0.612 -0.311 0.545 -0.311ZM0.329 -0.601Q0.297 -0.601 0.2775 -0.582Q0.258 -0.563 0.258 -0.531Q0.258 -0.499 0.2775 -0.48Q0.297 -0.461 0.329 -0.461H0.511Q0.543 -0.461 0.5625 -0.48Q0.582 -0.499 0.582 -0.531Q0.582 -0.563 0.5625 -0.582Q0.543 -0.601 0.511 -0.601ZM0.515 -0.18H0.78V-0.03H0.06V-0.18H0.325V-0.28H0.515Z"],"프":[0.84,"M0.76 -0.752H0.08V-0.601H0.76ZM0.673 -0.564H0.485L0.477 -0.426H0.363L0.355 -0.564H0.167L0.175 -0.426H0.08V-0.276H0.76V-0.426H0.665ZM0.06 -0.18V-0.03H0.78V-0.18Z"]};
 const GP={};
 function glyphPath(str,x,y,fs,align){let w=0;for(const ch of str)w+=(GLYPHS[ch]||GLYPHS[' '])[0];
   let px=x-(align==='center'?w/2:align==='right'?w:0)*fs;const p=new Path2D();
@@ -4632,7 +4637,9 @@ function drawHUD(){
   const cx=W/2,y=12,hd=mode.hud();
   ctx.textAlign='center';ctx.textBaseline='middle';
   /* 아군은 왼쪽 위, 적군은 오른쪽 위 */
-  if(hd.l!==''&&hd.l!=null){const bw=Math.min(230,W*.26),bh=28;
+  if(hd.plain&&hd.l!=null){/* 막대 없이 숫자만 (바운티 0/20) */ctx.font='26px "Black Han Sans",sans-serif';ctx.lineWidth=5;ctx.strokeStyle='#14122a';
+    for(const[side,val,col]of[[0,hd.l,'#5ab8ff'],[1,hd.r,'#ff4a5c']]){ctx.textAlign=side?'right':'left';const tx=side?W-18:18;ctx.strokeText(String(val),tx,y+15);ctx.fillStyle=col;ctx.fillText(String(val),tx,y+15);}ctx.textAlign='center';}
+  else if(hd.l!==''&&hd.l!=null){const bw=Math.min(230,W*.26),bh=28;
     for(const[side,val,fr,col]of[[0,hd.l,hd.lf,'#5ab8ff'],[1,hd.r,hd.rf,'#ff4a5c']]){const bx=side?W-14-bw:14;
       ctx.fillStyle='#14122a';rr(ctx,bx-3,y-3,bw+6,bh+6,10);ctx.fill();
       ctx.fillStyle='rgba(255,255,255,.12)';rr(ctx,bx,y,bw,bh,8);ctx.fill();
@@ -4643,6 +4650,8 @@ function drawHUD(){
   ctx.font=(hd.mid||!mode.time?'17px':'25px')+' "Black Han Sans",sans-serif';const mw=Math.max(90,ctx.measureText(mid).width+30);
   ctx.fillStyle='rgba(20,18,42,.88)';rr(ctx,cx-mw/2,y-2,mw,34,10);ctx.fill();
   ctx.fillStyle=mode.time&&timeLeft<20?'#ff5470':'#f4f1ff';ctx.fillText(mid,cx,y+15);
+  if(mode===MODES.gem&&countdown&&state==='play'){/* 보석 10개 이상 든 팀의 승리 카운트 (우리 팀 파랑 · 상대 팀 빨강) */const myT=player?baseTeam(player):0;
+    ctx.font='44px "Black Han Sans",sans-serif';ctx.lineWidth=7;ctx.strokeStyle='#14122a';const ct=String(Math.max(0,Math.ceil(countdown.t)));ctx.strokeText(ct,cx,y+66);ctx.fillStyle=countdown.team===myT?'#5ab8ff':'#ff4a5c';ctx.fillText(ct,cx,y+66);}
   if(hd.sub&&mode===MODES.train){/* 모드 목표 설명은 안 보임 (연습장 피해 기록만) */ctx.font='700 11px "Noto Sans KR",sans-serif';const sw=ctx.measureText(hd.sub).width+18;ctx.fillStyle='rgba(20,18,42,.7)';rr(ctx,cx-sw/2,y+36,sw,18,8);ctx.fill();ctx.fillStyle='#d9d6ff';ctx.fillText(hd.sub,cx,y+45);}
   ctx.textAlign='left';ctx.font='700 13px "Noto Sans KR",sans-serif';
   /* 처치 알림: 아군이 처치하면 왼쪽 위, 적군이 처치하면 오른쪽 위 */
@@ -5613,18 +5622,18 @@ function evCard(id,title,sub,pressed,onSel,onInfo,banner){const b=document.creat
   const cv=document.createElement('canvas');cv.className='ev-bn';cv.width=400;cv.height=200;banner(cv);sel.append(hd,cv);sel.onclick=onSel;sel.dataset.mode=id;b.append(sel);
   if(onInfo){const inf=document.createElement('button');inf.className='ev-i';inf.textContent='i';inf.setAttribute('aria-label',sub+' 정보');inf.onclick=e=>{e.stopPropagation();onInfo();};b.append(inf);}
   return b;}
-const DUEL_KINDS=[['bot','봇전','1대1 · 봇과 대결'],['local','한 기기','1대1 · 한 기기로 둘이서'],['online','온라인','1대1 · 친구와 각자 기기로']];
+const DUEL_KINDS=[['bot','봇전','1대1 · 봇과 대결'],['local','오프라인','오프라인'],['online','온라인','온라인']];
 function duelBanner(cv,nm){const x=cv.getContext('2d');x.fillStyle=shade(MODE_COL.duel,.72);x.fillRect(0,0,cv.width,cv.height);const ic=document.createElement('canvas');ic.width=140;ic.height=140;drawModeIcon(ic,'duel');x.drawImage(ic,cv.width/2-70,cv.height/2-88);
   {const q=glyphPath(nm,cv.width/2,cv.height-22,34,'center');x.lineWidth=7;x.strokeStyle='#14122a';x.stroke(q);x.fillStyle='#fff';x.fill(q);}}
 /* 듀얼 종류를 누르면 그 듀얼의 맵을 일반 맵처럼 보여줌 */
 function renderDuelMaps(ev){const[dk,nm]=DUEL_KINDS.find(d=>d[0]===duelView);
   const pick=mi=>{if(dk==='bot'){duelSel={kind:'bot',mi};renderEvents();scr('scrHome');}else beginPick(dk,mi);};
   const isSel=mi=>!!duelSel&&dk==='bot'&&duelSel.mi===mi;
-  ev.appendChild(evCard('duel','듀얼 · '+nm,'랜덤 맵',isSel(null),()=>pick(null),()=>openInfo('duel',null),cv=>drawRandBanner(cv,'duel')));
+  ev.appendChild(evCard('duel','듀얼','랜덤 맵',isSel(null),()=>pick(null),()=>openInfo('duel',null),cv=>drawRandBanner(cv,'duel')));
   MAPS.forEach((m,i)=>{if(m.mode!=='duel')return;const b=document.createElement('div');b.className='ev';b.style.setProperty('--mc',MODE_COL.duel);
     const sel=document.createElement('button');sel.className='ev-sel';sel.id='dmap-'+m.id;sel.setAttribute('aria-pressed',String(isSel(i)));sel.setAttribute('aria-label','듀얼 · '+nm+' · '+m.name);
     const hd=document.createElement('span');hd.className='ev-hd';const ic=document.createElement('canvas');ic.width=96;ic.height=96;drawModeIcon(ic,'duel');
-    const tt=document.createElement('span');tt.className='ev-tt';tt.innerHTML='<b></b><small></small>';tt.querySelector('b').textContent='듀얼 · '+nm;tt.querySelector('small').textContent=m.name;hd.append(ic,tt);
+    const tt=document.createElement('span');tt.className='ev-tt';tt.innerHTML='<b></b><small></small>';tt.querySelector('b').textContent='듀얼';tt.querySelector('small').textContent=m.name;hd.append(ic,tt);
     const cv=document.createElement('canvas');cv.className='ev-bn';cv.width=400;cv.height=200;drawMap(cv,m,true);sel.dataset.mode='duel';sel.append(hd,cv);sel.onclick=()=>pick(i);
     const inf=document.createElement('button');inf.className='ev-i';inf.textContent='i';inf.setAttribute('aria-label',m.name+' 정보');inf.onclick=e=>{e.stopPropagation();openInfo('duel',m);};
     b.append(sel,inf);ev.appendChild(b);});
@@ -5632,11 +5641,15 @@ function renderDuelMaps(ev){const[dk,nm]=DUEL_KINDS.find(d=>d[0]===duelView);
 function renderEvents(){const ev=document.getElementById('events');ev.innerHTML='';
   const grp=(c,g)=>{c.dataset.grp=g;return c;};
   if(duelView){renderDuelMaps(ev);return;}
+  /* 랜덤 맵: 전부 맨 앞에 모음 */
   ev.appendChild(grp(evCard('rand','랜덤','모든 모드 · 모든 맵',!duelSel&&mapRand==='all',()=>{duelSel=null;mapRand='all';renderEvents();scr('scrHome');},null,cv=>drawRandBanner(cv,'rand')),'rand'));
   ev.appendChild(evCard('rand','3대3 랜덤','쇼다운 제외 모든 맵',!duelSel&&mapRand==='team',()=>{duelSel=null;mapRand='team';renderEvents();scr('scrHome');},null,cv=>drawRandBanner(cv,'rand')));
-  for(const id of MODE_ORDER){ev.appendChild(grp(evCard(id,MODES[id].name,'랜덤 맵',!duelSel&&mapRand===id,()=>{duelSel=null;mapRand=id;modeId=id;renderEvents();scr('scrHome');},()=>openInfo(id,null),cv=>drawRandBanner(cv,id)),id));
+  for(const id of MODE_ORDER)ev.appendChild(evCard(id,MODES[id].name,'랜덤 맵',!duelSel&&mapRand===id,()=>{duelSel=null;mapRand=id;modeId=id;renderEvents();scr('scrHome');},()=>openInfo(id,null),cv=>drawRandBanner(cv,id)));
+  const pickBot=mi=>{duelSel={kind:'bot',mi};renderEvents();scr('scrHome');};/* 듀얼 봇전 */
+  ev.appendChild(evCard('duel','듀얼','랜덤 맵',!!duelSel&&duelSel.mi==null,()=>pickBot(null),()=>openInfo('duel',null),cv=>drawRandBanner(cv,'duel')));
+  for(const id of MODE_ORDER){let first=true;
   MAPS.forEach((m,i)=>{if(m.mode!==id)return;
-    const b=document.createElement('div');b.className='ev';b.style.setProperty('--mc',MODE_COL[id]||'#7b6cff');
+    const b=document.createElement('div');b.className='ev';b.style.setProperty('--mc',MODE_COL[id]||'#7b6cff');if(first){b.dataset.grp=id;first=false;}
     const sel=document.createElement('button');sel.className='ev-sel';sel.id='map-'+m.id;sel.setAttribute('aria-pressed',String(!duelSel&&!mapRand&&i===mapIdx));sel.setAttribute('aria-label',MODES[id].name+' · '+m.name);
     const hd=document.createElement('span');hd.className='ev-hd';const ic=document.createElement('canvas');ic.width=96;ic.height=96;drawModeIcon(ic,id);
     const tt=document.createElement('span');tt.className='ev-tt';tt.innerHTML='<b></b><small></small>';tt.querySelector('b').textContent=MODES[id].name;tt.querySelector('small').textContent=m.name;hd.append(ic,tt);
@@ -5644,15 +5657,14 @@ function renderEvents(){const ev=document.getElementById('events');ev.innerHTML=
     sel.dataset.mode=id;sel.append(hd,cv);sel.onclick=()=>{duelSel=null;mapRand=null;modeId=id;mapIdx=i;buildGrid(MAPS[i]);renderMaps();renderEvents();scr('scrHome');};
     const inf=document.createElement('button');inf.className='ev-i';inf.textContent='i';inf.setAttribute('aria-label',m.name+' 정보');inf.onclick=e=>{e.stopPropagation();openInfo(id,m);};
     b.append(sel,inf);ev.appendChild(b);});}
-  {const pickBot=mi=>{duelSel={kind:'bot',mi};renderEvents();scr('scrHome');};/* 듀얼 봇전: 다른 모드처럼 바로 맵을 보여줌 */
-   ev.appendChild(grp(evCard('duel','듀얼','랜덤 맵',!!duelSel&&duelSel.mi==null,()=>pickBot(null),()=>openInfo('duel',null),cv=>drawRandBanner(cv,'duel')),'duel'));
-   MAPS.forEach((m,i)=>{if(m.mode!=='duel')return;const b=document.createElement('div');b.className='ev';b.style.setProperty('--mc',MODE_COL.duel);
+  /* 듀얼: 오프라인 · 온라인이 맨 앞 */
+  DUEL_KINDS.filter(d=>d[0]!=='bot').forEach(([dk,nm,sub],n)=>{const c=evCard('duel','듀얼',sub,false,()=>{duelView=dk;renderEvents();ev.scrollLeft=0;},null,cv=>duelBanner(cv,nm));c.dataset.nav='1';if(n===0)c.dataset.grp='duel';ev.appendChild(c);});
+  MAPS.forEach((m,i)=>{if(m.mode!=='duel')return;const b=document.createElement('div');b.className='ev';b.style.setProperty('--mc',MODE_COL.duel);
      const sel=document.createElement('button');sel.className='ev-sel';sel.id='map-'+m.id;sel.setAttribute('aria-pressed',String(!!duelSel&&duelSel.mi===i));sel.setAttribute('aria-label','듀얼 · '+m.name);
      const hd=document.createElement('span');hd.className='ev-hd';const ic=document.createElement('canvas');ic.width=96;ic.height=96;drawModeIcon(ic,'duel');
      const tt=document.createElement('span');tt.className='ev-tt';tt.innerHTML='<b></b><small></small>';tt.querySelector('b').textContent='듀얼';tt.querySelector('small').textContent=m.name;hd.append(ic,tt);
      const cv=document.createElement('canvas');cv.className='ev-bn';cv.width=400;cv.height=200;drawMap(cv,m,true);sel.dataset.mode='duel';sel.append(hd,cv);sel.onclick=()=>pickBot(i);
-     const inf=document.createElement('button');inf.className='ev-i';inf.textContent='i';inf.setAttribute('aria-label',m.name+' 정보');inf.onclick=e=>{e.stopPropagation();openInfo('duel',m);};b.append(sel,inf);ev.appendChild(b);});}
-  DUEL_KINDS.filter(d=>d[0]!=='bot').forEach(([dk,nm,sub],n)=>{const c=evCard('duel','듀얼 · '+nm,sub,!!duelSel&&dk==='bot',()=>{duelView=dk;renderEvents();ev.scrollLeft=0;},null,cv=>duelBanner(cv,nm));c.dataset.nav='1';ev.appendChild(c);});
+     const inf=document.createElement('button');inf.className='ev-i';inf.textContent='i';inf.setAttribute('aria-label',m.name+' 정보');inf.onclick=e=>{e.stopPropagation();openInfo('duel',m);};b.append(sel,inf);ev.appendChild(b);});
   const nav=document.getElementById('evNav');nav.innerHTML='';for(const g of['rand',...MODE_ORDER,'duel']){const b=document.createElement('button');b.setAttribute('aria-label',(g==='rand'?'랜덤':MODES[g].name)+'(으)로 이동');const c=document.createElement('canvas');c.width=80;c.height=80;drawModeIcon(c,g);b.appendChild(c);
     b.onclick=()=>{const el=ev.querySelector('[data-grp="'+g+'"]');if(el)ev.scrollTo({left:el.offsetLeft-ev.offsetLeft-4,behavior:'smooth'});};nav.appendChild(b);}}
 let infoReturn=null;
@@ -5672,7 +5684,7 @@ function renderMenu(){buildHeroes();renderMaps();renderEvents();renderSel();}
 document.getElementById('dBack').onclick=document.getElementById('dNavBack').onclick=()=>{window.__restoreScroll=true;scr('scrHeroes');};/* 상세 화면의 뒤로가기는 모두 바로 전 스크롤로 */
 document.getElementById('dPick').onclick=()=>{if(pickDone(viewing))return;chosen=viewing;heroRand=false;renderSel();scr('scrHome');};
 function renderHomeDuel(){const c=document.getElementById('hCanvas'),cc=c.getContext('2d');cc.setTransform(1,0,0,1,0,0);cc.clearRect(0,0,440,440);cc.scale(2,2);drawFront(cc,heroRand?'random':chosen,110,108,206);
-  document.getElementById('hName').textContent=heroRand?'랜덤':HEROES[chosen].name;document.getElementById('hModeName').textContent='듀얼 · 봇전';document.getElementById('hMapName').textContent=duelMapName(duelSel.mi);drawModeIcon(document.getElementById('hModeIc'),'duel');}
+  document.getElementById('hName').textContent=heroRand?'랜덤':HEROES[chosen].name;document.getElementById('hModeName').textContent='듀얼';document.getElementById('hMapName').textContent=duelMapName(duelSel.mi);drawModeIcon(document.getElementById('hModeIc'),'duel');}
 function renderHome(){if(duelSel)return renderHomeDuel();const c=document.getElementById('hCanvas'),cc=c.getContext('2d');cc.setTransform(1,0,0,1,0,0);cc.clearRect(0,0,440,440);cc.scale(2,2);drawFront(cc,heroRand?'random':chosen,110,108,206);
   document.getElementById('hName').textContent=heroRand?'랜덤':HEROES[chosen].name;const RA=mapRand==='all'||mapRand==='team';document.getElementById('hModeName').textContent=mapRand==='all'?'랜덤':mapRand==='team'?'3대3 랜덤':MODES[mapRand||modeId].name;document.getElementById('hMapName').textContent=mapRand==='all'?'모든 모드 · 모든 맵':mapRand==='team'?'쇼다운 제외 모든 맵':mapRand?'랜덤 맵':MAPS[mapIdx].name;drawModeIcon(document.getElementById('hModeIc'),RA?'rand':(mapRand||modeId));const now=new Date(),mid=new Date(now);mid.setHours(24,0,0,0);const mins=Math.floor((mid-now)/60000);document.getElementById('hTimer').textContent='신규 맵: '+(mins>=60?Math.floor(mins/60)+'시간':mins+'분');}
 document.getElementById('hInfo').onclick=()=>{if(duelSel)return openInfo('duel',duelSel.mi!=null?MAPS[duelSel.mi]:null);if(mapRand==='all'||mapRand==='team')return scr('scrPlay');if(mapRand)return openInfo(mapRand,null);openInfo(modeId,MAPS[mapIdx]);};
