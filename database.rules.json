@@ -69,13 +69,6 @@
           }
         }
       }
-    },
-    "usage": {
-      ".read": "auth != null",
-      "$month": {
-        ".write": "auth != null",
-        ".validate": "newData.isNumber() && (!data.exists() || newData.val() >= data.val())"
-      }
     }
   }
 }
