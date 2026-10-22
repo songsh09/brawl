@@ -426,7 +426,7 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
 @media (orientation:portrait){
   .home{--u:min(1.9vw,1.05svh)}
   .h-stage{top:50%}#hCanvas{width:calc(var(--u)*28);height:calc(var(--u)*28)}
-  .h-tl .trophy{display:none}
+  
   .h-left,.h-right{top:30%;bottom:auto}
   .h-mini,.h-boxes{display:none}
   .h-ev{left:calc(var(--u)*2);right:calc(var(--u)*2);width:auto;bottom:calc(var(--u)*16)}
@@ -557,7 +557,7 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
 .ev-strip{text-align:right;padding-right:calc(var(--u)*5)}
 .h-play{width:25%}.hplay{border-radius:8px}
 .h-ev{left:44%;width:29%}
-@media (orientation:portrait){.h-slot,.h-skin,.rankb,.h-tr .cur:first-child{display:none}.h-ev{left:calc(var(--u)*2);width:auto}.h-play{width:auto}.h-left,.h-right{top:30%}}
+@media (orientation:portrait){.h-ev{left:calc(var(--u)*2);width:auto}.h-play{width:auto}.h-left,.h-right{top:30%}}
 
 /* 모바일: 모든 요소가 화면 안에 보이도록 */
 .mbox>.mhead{flex:none}.mbox>*:not(.mhead){overflow:auto;min-height:0;-webkit-overflow-scrolling:touch}
@@ -598,7 +598,7 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
       <div class="h-tl"><button class="tile prof" id="profBtn" aria-haspopup="dialog"><span class="av"><svg viewBox="0 0 32 32"><circle cx="16" cy="15" r="9" fill="#fff" stroke="#14122a" stroke-width="2.4"/><circle cx="12.5" cy="14" r="2.2" fill="#14122a"/><circle cx="19.5" cy="14" r="2.2" fill="#14122a"/><path d="M12 19.5q4 2.5 8 0" fill="none" stroke="#14122a" stroke-width="2" stroke-linecap="round"/></svg></span><small id="profNick">닉네임 설정</small></button>
         <div class="tile trophy"><span class="tp-av"></span><div class="tp-col"><span class="tp-row"><span class="tr-ic"></span><b>0</b></span><span class="bar"><i></i></span></div><span class="tp-goal"><svg viewBox="0 0 24 24"><path d="M12 2l2.8 6.3 6.9.6-5.2 4.6 1.6 6.8L12 16.8 5.9 20.3l1.6-6.8L2.3 8.9l6.9-.6z" fill="#ffd23f" stroke="#14122a" stroke-width="1.8" stroke-linejoin="round"/></svg></span></div>
         <div class="tile rankb"><svg viewBox="0 0 40 40"><path d="M20 3l4 7 8-3-2 9 6 4-7 3 1 8-7-3-3 9-3-9-7 3 1-8-7-3 6-4-2-9 8 3z" fill="#ffc93c" stroke="#14122a" stroke-width="2.4" stroke-linejoin="round"/><circle cx="20" cy="20" r="6" fill="#e0901c" stroke="#14122a" stroke-width="2"/></svg></div></div>
-      <div class="h-tr"><div class="cur" aria-hidden="true"><span class="pp"><svg viewBox="0 0 24 24"><path d="M14 2 5 14h6l-2 8 10-13h-6z" fill="#fff" stroke="#14122a" stroke-width="1.6" stroke-linejoin="round"/></svg></span><b>0</b></div><div class="cur" aria-hidden="true"><span class="coin"></span><b>0</b></div><div class="cur" aria-hidden="true"><span class="gem"></span><b>0</b></div><button class="tile menu-b" id="menuBtn" aria-label="설정" aria-haspopup="dialog"><i></i><i></i><i></i></button></div>
+      <div class="h-tr"><div class="cur" aria-hidden="true"><span class="pp"><svg viewBox="0 0 24 24"><path d="M14 2 5 14h6l-2 8 10-13h-6z" fill="#fff" stroke="#14122a" stroke-width="1.6" stroke-linejoin="round"/></svg></span><b>0</b></div><div class="cur" aria-hidden="true"><span class="coin"></span><b>0</b></div><div class="cur" aria-hidden="true"><span class="gem"></span><b>0</b></div><div class="ht-team" id="htTeam" hidden><span class="ht-cd"><small>팀 코드:</small><b id="htCode"></b></span><button class="tile ht-btn" id="htShare" aria-label="팀 코드 공유"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="tile ht-leave" id="htLeave">팀 나가기</button></div><button class="tile menu-b" id="menuBtn" aria-label="설정" aria-haspopup="dialog"><i></i><i></i><i></i></button></div>
       <div class="h-left"><div class="tile side deco" aria-hidden="true"><svg viewBox="0 0 32 32"><ellipse cx="16" cy="18" rx="11" ry="10" fill="#ffe14a" stroke="#14122a" stroke-width="2.5"/><path d="M9 11q2-6 7-6t7 6" fill="#ffe14a" stroke="#14122a" stroke-width="2.5"/><circle cx="12" cy="17" r="2.6" fill="#14122a"/><circle cx="20" cy="17" r="2.6" fill="#14122a"/><path d="M12 23q4 2.6 8 0" fill="none" stroke="#14122a" stroke-width="2.2" stroke-linecap="round"/></svg><span>버피</span></div>
         <div class="tile side deco" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5 12h22l-2 15H7z" fill="#ff6b6b" stroke="#14122a" stroke-width="2.5"/><path d="M11 12V9a5 5 0 0 1 10 0v3" fill="none" stroke="#14122a" stroke-width="2.5"/></svg><span>상점</span></div>
         <button class="tile side" id="hBrawlers"><svg viewBox="0 0 32 32"><rect x="3" y="8" width="11" height="15" rx="2" fill="#6fb6f0" stroke="#14122a" stroke-width="2.2"/><rect x="11" y="5" width="11" height="15" rx="2" fill="#ffd23f" stroke="#14122a" stroke-width="2.2"/><rect x="19" y="8" width="11" height="15" rx="2" fill="#b07cff" stroke="#14122a" stroke-width="2.2"/></svg><span>브롤러</span></button></div>
@@ -767,6 +767,45 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
 .pf-help{margin:0;font-family:var(--name);font-size:13px;opacity:.85;line-height:1.5}
 @media (orientation:portrait){.pf-box{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr)}.pf-right{padding-top:56px}}
 @media (max-width:620px){.gm-box{width:min(70vw,360px)}}
+</style>
+<style id="v6">
+/* 사진 1 배치: 큰 브롤러, + 칸·옷걸이 위치 */
+.h-stage{top:55%}
+#hCanvas{width:calc(var(--u)*44);height:calc(var(--u)*44)}
+.h-slot.l{left:25%;top:53%}.h-slot.r{left:73%;top:53%}
+.h-skin{left:35%;top:68%}
+/* 팀일 때 상단: 재화 대신 팀 코드 · 공유 · 팀 나가기 */
+.home.in-team .h-tr .cur{display:none}
+.ht-team{display:flex;align-items:center;gap:calc(var(--u)*1)}
+.ht-cd{display:grid;line-height:1;text-align:left;color:#fff;text-shadow:0 2px 0 #14122a;margin-right:calc(var(--u)*.6)}
+.ht-cd small{font-size:calc(var(--u)*1.6)}.ht-cd b{font-size:calc(var(--u)*3);letter-spacing:.04em}
+.ht-btn{display:grid;place-items:center;width:calc(var(--u)*6.4);height:calc(var(--u)*5.4);padding:0}
+.ht-btn svg{width:60%;height:60%}
+.ht-leave{background:linear-gradient(180deg,#ff5a5a,#d8323a)!important;color:#fff;font-size:calc(var(--u)*2);padding:calc(var(--u)*1.2) calc(var(--u)*1.6);white-space:nowrap;text-shadow:0 2px 0 #14122a}
+/* 눌림 표시 */
+.home .tile,.home .h-slot,.home .hmode,.home .hplay,#hCanvas{-webkit-tap-highlight-color:transparent;transition:transform .06s,filter .06s}
+.home .tile:active,.home .hmode:active,.home .hplay:active{transform:translateY(3px)!important;box-shadow:0 1px 0 #14122a!important;filter:brightness(.9)}
+.home .h-slot:not(.filled):active{transform:translate(-50%,calc(-50% + 3px)) skewX(-4deg)!important;filter:brightness(.9)}
+.home .h-slot.filled:active{filter:brightness(.9)}
+#hCanvas:active{filter:brightness(.92)}
+/* 채팅 말풍선 */
+.h-bubble{position:absolute;left:64%;top:22%;z-index:3;width:max-content;min-width:calc(var(--u)*6);max-width:calc(var(--u)*26);background:#fff;color:#14122a;font-family:var(--name);font-weight:900;font-size:calc(var(--u)*2.2);line-height:1.25;padding:calc(var(--u)*1.2) calc(var(--u)*2);border-radius:14px;border:3px solid #14122a;box-shadow:0 4px 0 rgba(20,18,42,.35);white-space:normal;word-break:break-word;text-align:center;pointer-events:none;animation:hbIn .2s ease-out both}
+.h-bubble::after{content:"";position:absolute;left:18%;bottom:-12px;width:18px;height:18px;background:#fff;border-right:3px solid #14122a;border-bottom:3px solid #14122a;transform:rotate(45deg) skew(10deg,10deg)}
+.h-slot .h-bubble{left:55%;top:-34%;transform:translateX(-20%)}
+.h-bubble.out{opacity:0;transition:opacity .35s}
+@keyframes hbIn{from{opacity:0;scale:.6}to{opacity:1;scale:1}}
+/* 세로: 숨기지 않고 작게 */
+@media (orientation:portrait){
+  .home{--u:min(1.55vw,1.05svh)}
+  .h-tl{transform:scale(.92);transform-origin:top left}
+  .h-tr{top:calc(var(--u)*10.5);transform:scale(.92);transform-origin:top right}
+  .h-left,.h-right{top:24%}
+  .h-stage{top:47%}#hCanvas{width:calc(var(--u)*34);height:calc(var(--u)*34)}
+  .h-slot.l{left:20%;top:62%}.h-slot.r{left:80%;top:62%}
+  .h-slot.filled{width:calc(var(--u)*16);height:calc(var(--u)*19)}
+  .h-skin{left:50%;top:72%}
+  .h-slot .h-bubble{top:-52%}
+}
 </style>
 <script>const TAU=Math.PI*2;/* 한 바퀴 */
 const angD=(a,b)=>((a-b+Math.PI*3)%TAU)-Math.PI;/* 두 각도 차이 (-π~π) */
@@ -2293,15 +2332,27 @@ function openOnline(){SO.open=null;renderOnline();document.getElementById('socia
   document.getElementById('soAddYes').addEventListener('click',add);ai.addEventListener('keydown',e=>{if(e.key==='Enter')add();});
 }
 /* 홈 화면 + 슬롯에 팀원 표시 */
+/* 홈 화면 말풍선: 나 또는 팀원이 채팅하면 그 브롤러 옆에 잠깐 */
+function homeBubble(m){
+  const B=window.BSO;if(!m||!m.fresh||!B)return;
+  let host=null;
+  if(m.from===B.uid)host=document.querySelector('#scrHome .h-stage');
+  else{const r=B.room;if(!r||!r.members[m.from])return;const ids=Object.keys(r.members).filter(u=>u!==r.me).sort((x,y)=>(r.members[x].j||0)-(r.members[y].j||0));const i=ids.indexOf(m.from);host=document.querySelectorAll('.h-slot')[i]||null;}
+  if(!host)return;
+  const old=host.querySelector('.h-bubble');if(old)old.remove();
+  const b=el('span','h-bubble',m.text.slice(0,40));host.append(b);
+  setTimeout(()=>{b.classList.add('out');setTimeout(()=>b.remove(),400);},4000);
+}
 function renderTeam(r){
   const slots=[...document.querySelectorAll('.h-slot')];
   const ids=r?Object.keys(r.members).filter(u=>u!==r.me).sort((x,y)=>(r.members[x].j||0)-(r.members[y].j||0)):[];
-  slots.forEach((s,i)=>{const m=ids[i]?r.members[ids[i]]:null;s.textContent='';s.classList.toggle('filled',!!m);s.classList.toggle('ready',!!(m&&m.ready));
+  {const home=document.getElementById('scrHome');home.classList.toggle('in-team',!!r);const ht=document.getElementById('htTeam');ht.hidden=!r;if(r)document.getElementById('htCode').textContent=r.id;}
+  slots.forEach((s,i)=>{const m=ids[i]?r.members[ids[i]]:null;const keepB=s.querySelector('.h-bubble');s.textContent='';if(keepB&&m)s.append(keepB);s.classList.toggle('filled',!!m);s.classList.toggle('ready',!!(m&&m.ready));
     if(!m){s.textContent='＋';s.setAttribute('aria-label','친구 초대');return;}
     const nm=el('span','mate-nm',(m.nick||'?')+(m.ready?' ✓':''));const ACT={brawler:'브롤러 선택 중',map:'맵 선택 중'};if(ACT[m.act]&&!m.ready)nm.append(el('small','mate-act',ACT[m.act]));
     const c=document.createElement('canvas');c.width=c.height=300;c.className='mate-cv';
     const cc=c.getContext('2d');cc.scale(300/220,300/220);try{drawFront(cc,HEROES[m.hero]?m.hero:'random',110,108,206);}catch(e){}
-    s.append(nm,c);s.setAttribute('aria-label','팀원 '+(m.nick||'')+(m.ready?' 준비 완료':''));});
+    s.prepend(nm,c);s.setAttribute('aria-label','팀원 '+(m.nick||'')+(m.ready?' 준비 완료':''));});
 }
 /* 전체 채팅 */
 function renderChat(){
@@ -2340,7 +2391,7 @@ bso(B=>{
   B.on('ready',()=>{document.getElementById('pfCode').textContent=B.code;renderOnline();});
   B.on('status',t=>toast(t));
   B.on('presence',()=>{if(!document.getElementById('socialBox').hidden)renderOnline();});
-  B.on('chat',m=>{chatLog.push(m);if(chatLog.length>100)chatLog.shift();if(!document.getElementById('chatBox').hidden)renderChat();});
+  B.on('chat',m=>{homeBubble(m);chatLog.push(m);if(chatLog.length>100)chatLog.shift();if(!document.getElementById('chatBox').hidden)renderChat();});
   B.on('invite',inv=>{invQ.push(inv);showInvite();});
   B.on('room',r=>{renderTeam(r);if(!document.getElementById('socialBox').hidden)renderOnline();});
   B.on('log',t=>toast(t));
@@ -2647,6 +2698,10 @@ bso(B=>{
     renderHome();toast('팀원 모두 준비 완료! 전투를 시작해요');startGame();
   });
 });
+/* 팀 상단 바 버튼 · 눌림 표시(아이폰에서도 :active 동작) */
+document.getElementById('htLeave').addEventListener('click',()=>{if(window.BSO)window.BSO.leaveRoom();});
+document.getElementById('htShare').addEventListener('click',()=>document.getElementById('tbShare').click());
+document.addEventListener('touchstart',()=>{},{passive:true});
 /* 접속 상태(전투 중 / 메뉴 화면) 알리기 */
 window.__mapLocked=()=>{const r=window.BSO&&window.BSO.room;if(!r||Object.keys(r.members).length<2||r.isHost)return false;toast('맵은 방장만 고를 수 있어요');return true;};
 {let lastAct=null,lastSel='',lastApplied='';setInterval(()=>{const B=window.BSO;if(!B||!B.online)return;const r=B.room;if(!r){lastAct=null;lastSel='';return;}
@@ -5620,7 +5675,7 @@ BSO.uidByCode = code => { for (const u in BSO.presence) if (BSO.presence[u].code
 function startChat() {
   const since = Date.now() - CHAT_KEEP;
   onChildAdded(query(ref(db, 'chat'), orderByChild('t'), startAt(since), limitToLast(100)), s => {
-    const m = s.val(); if (m && typeof m.text === 'string') emit('chat', { nick: String(m.nick || '???').slice(0, 12), text: m.text.slice(0, 200), t: m.t, mine: m.from === me });
+    const m = s.val(); if (m && typeof m.text === 'string') emit('chat', { nick: String(m.nick || '???').slice(0, 12), text: m.text.slice(0, 200), t: m.t, mine: m.from === me, from: m.from, fresh: (m.t || 0) > Date.now() - 15000 });
   });
   get(query(ref(db, 'chat'), orderByChild('t'), endAt(since), limitToFirst(100))).then(snap => { snap.forEach(c => { remove(c.ref).catch(() => {}); }); }).catch(() => {});
 }
