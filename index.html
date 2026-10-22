@@ -2397,7 +2397,6 @@ function renderTeam(r){
     const cc=c.getContext('2d');cc.scale(300/220,300/220);try{drawFront(cc,HEROES[m.hero]?m.hero:'random',110,108,206);}catch(e){}
     s.prepend(nm,c);s.setAttribute('aria-label','팀원 '+(m.nick||'')+(m.ready?' 준비 완료':''));});
 }
-addEventListener('randfont',()=>{if(window.BSO)renderTeam(window.BSO.room);});
 /* 전체 채팅 */
 function renderChat(){
   const box=document.getElementById('chatList');box.textContent='';
@@ -3492,16 +3491,14 @@ function drawSummonFront(c,k,x,y,S){const O='#14122a',lw=Math.max(1.2,S*.05);c.s
     Q(x,g-S*.78,S*.36,S*.3,S*.06,'#f0a020');Q(x,g-S*.73,S*.26,S*.17,S*.03,'#1d2033');eyes(x,g-S*.65,S*.06,S*.035,'#9ff3ff');}
   else if(t==='portal'){c.lineWidth=lw*1.6;for(const dx of[-.18,.2]){c.strokeStyle='#8f5bd6';c.fillStyle='rgba(143,91,214,.35)';c.beginPath();c.ellipse(x+S*dx,g-S*.3,S*.13,S*.3,0,0,TAU);c.fill();c.stroke();}}
   c.restore();}
-/* 물음표 글꼴(Black Han Sans)이 아직 안 받아졌을 때 그리면 기본 글꼴 모양이 됨 → 받아지면 다시 그림 */
-let randFontWait=false;
-const randFontOk=()=>{if(!document.fonts)return true;for(const f of document.fonts)if(f.family.replace(/["']/g,'')==='Black Han Sans'&&f.status==='loaded')return true;return false;};
-function watchRandFont(){if(!randFontWait&&!randFontOk())randFontWait=true;}
-if(document.fonts)document.fonts.addEventListener('loadingdone',()=>{if(randFontWait&&randFontOk()){randFontWait=false;dispatchEvent(new Event('randfont'));}});
-function drawRandFront(c,cx,cy,S){/* 랜덤: 입체 물음표 하나 */watchRandFont();const O='#14122a';c.save();const foot=cy+S*.43;
+/* 물음표 모양(Black Han Sans의 '?'를 도형으로 옮김: 글꼴을 받았는지와 상관없이 항상 같은 모양) — 글자 크기 1, 가운데 정렬, 기준선 0 */
+const Q_PATH=new Path2D('M-0.0205 -0.178Q0.0195 -0.178 0.046 -0.152Q0.0725 -0.126 0.0725 -0.084Q0.0725 -0.042 0.046 -0.016Q0.0195 0.01 -0.0205 0.01Q-0.0605 0.01 -0.0875 -0.017Q-0.1145 -0.044 -0.1145 -0.084Q-0.1145 -0.126 -0.0875 -0.152Q-0.0605 -0.178 -0.0205 -0.178ZM0.1905 -0.573Q0.1905 -0.537 0.186 -0.508Q0.1815 -0.479 0.172 -0.453Q0.1625 -0.427 0.147 -0.4015Q0.1315 -0.376 0.1105 -0.347Q0.0835 -0.311 0.0705 -0.2855Q0.0575 -0.26 0.0575 -0.225H-0.1025Q-0.1025 -0.259 -0.098 -0.2855Q-0.0935 -0.312 -0.085 -0.335Q-0.0765 -0.358 -0.0635 -0.379Q-0.0505 -0.4 -0.0345 -0.423Q-0.0195 -0.444 -0.0095 -0.461Q0.0005 -0.478 0.0075 -0.4945Q0.0145 -0.511 0.0175 -0.529Q0.0205 -0.547 0.0205 -0.569V-0.57Q0.0205 -0.59 -0.0005 -0.59Q-0.0205 -0.59 -0.0205 -0.57V-0.516L-0.1805 -0.506L-0.1905 -0.573Q-0.1905 -0.657 -0.1405 -0.7035Q-0.0905 -0.75 -0.0005 -0.75Q0.0905 -0.75 0.1405 -0.7035Q0.1905 -0.657 0.1905 -0.573Z');
+const qAt=(x,y,fs)=>{const p=new Path2D();p.addPath(Q_PATH,new DOMMatrix([fs,0,0,fs,x,y]));return p;};
+function drawRandFront(c,cx,cy,S){/* 랜덤: 입체 물음표 하나 */const O='#14122a';c.save();const foot=cy+S*.43;
   c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.ellipse(cx,foot+S*.01,S*.2,S*.045,0,0,TAU);c.fill();
-  const fs=Math.round(S*.95),x=cx,y=foot-S*.04;c.font=`${fs}px "Black Han Sans",sans-serif`;c.textAlign='center';c.textBaseline='alphabetic';c.lineJoin='round';
-  for(let i=8;i>=1;i--){c.fillStyle=i===8?O:'#c99a10';c.fillText('?',x+i*S*.007,y+i*S*.006);}/* 옆면(두께) */
-  c.lineWidth=S*.035;c.strokeStyle=O;c.strokeText('?',x,y);const g=c.createLinearGradient(x-S*.2,y-fs*.8,x+S*.2,y);g.addColorStop(0,'#fff3a0');g.addColorStop(.45,'#ffd23f');g.addColorStop(1,'#f0a800');c.fillStyle=g;c.fillText('?',x,y);
+  const fs=Math.round(S*.95),x=cx,y=foot-S*.04;c.lineJoin='round';
+  for(let i=8;i>=1;i--){c.fillStyle=i===8?O:'#c99a10';c.fill(qAt(x+i*S*.007,y+i*S*.006,fs));}/* 옆면(두께) */
+  const q=qAt(x,y,fs);c.lineWidth=S*.035;c.strokeStyle=O;c.stroke(q);const g=c.createLinearGradient(x-S*.2,y-fs*.8,x+S*.2,y);g.addColorStop(0,'#fff3a0');g.addColorStop(.45,'#ffd23f');g.addColorStop(1,'#f0a800');c.fillStyle=g;c.fill(q);
   c.save();c.globalAlpha=.55;c.fillStyle='#fff';c.beginPath();c.ellipse(x-S*.09,y-fs*.62,S*.05,S*.022,-.6,0,TAU);c.fill();c.restore();c.restore();}
 /* 설명에 맞는 손 도구·무기 (이 게임 스타일의 단순한 아이콘) — 손잡이가 원점, +x 방향으로 뻗음 */
 const PROP={shelly:'shotgun',colt:'revolver',bull:'shotgun',piper:'umbrella',dynamike:'dynamite',poco:'guitar',mortis:'shovel',brock:'rocket',crow:'dagger',rico:'blaster',leon:'shuriken',frank:'hammer',bit8:'blaster',amber:'torch',angelo:'bow',ash:'broom',barley:'bottle',bea:'rifle',belle:'rifle',berry:'icecream',bibi:'bat',bo:'bow',buster:'projector',buzz:'whistle',byron:'syringe',carl:'pickaxe',charlie:'yoyo',chester:'bell',clancy:'blaster',colette:'blaster',cordelius:'shears',cosmo:'planet',darryl:'shotgun',emz:'spray',eve:'egg',finx:'staff',gale:'blower',gene:'lamp',griff:'coin',grom:'walkie',gus:'balloon',jaeyong:'mic',janet:'mic',jessie:'blaster',juju:'needle',kaze:'fan',kenji:'sword',larry:'ticket',lou:'snowcone',lumi:'mace',maisie:'rocket',mandy:'blaster',max:'blaster',meeple:'piece',meg:'blaster',melodie:'mic',mico:'mic',moe:'shovel',mrp:'suitcase',najia:'jar',nori:'rod',otis:'spray',pam:'blaster',pearl:'cookie',penny:'pouch',pierce:'rifle',ruffs:'blaster',surge:'cup',tara:'cards',wendy:'dryer',willow:'lantern',ziggy:'wand'};
@@ -4681,7 +4678,6 @@ function buildHeroes(){
   heroesEl.innerHTML='';const grid=heroesEl;let lastRole=null;
   {const b=document.createElement('button');b.className='hero';b.id='hero-random';b.style.setProperty('--rc','#7b6cff');b.setAttribute('aria-label','랜덤 브롤러');
     const c=document.createElement('canvas');c.width=480;c.height=180;const cc=c.getContext('2d');cc.scale(2,2);cc.translate(60,0);drawRandFront(cc,45,38,76);/* 랜덤 물음표만 전신이 다 보이게 */
-    addEventListener('randfont',()=>{cc.save();cc.setTransform(1,0,0,1,0,0);cc.clearRect(0,0,480,180);cc.restore();drawRandFront(cc,45,38,76);},{once:true});
     const nm=document.createElement('span');nm.className='nm';nm.textContent='랜덤';const st=document.createElement('span');st.className='strip';st.innerHTML='<b>?</b>';
     b.append(c,nm,st);b.onclick=()=>{if(pickDone('random'))return;heroRand=true;scr('scrHome');};grid.appendChild(b);}
   for(const{k,rn,rc}of orderedList()){const h=HEROES[k];
@@ -5503,7 +5499,6 @@ document.getElementById('stInfo').addEventListener('click',e=>{if(e.target.id===
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('stInfo').hidden)closeStats();});
 document.getElementById('dTry').onclick=()=>{chosen=viewing;window.__tryHero=viewing;renderSel();startTraining();};
 {const tb=document.getElementById('trainSup');const fill=e=>{e.preventDefault();e.stopPropagation();if(player&&state==='play'){player.superCharge=1;tb.classList.add('hit');setTimeout(()=>tb.classList.remove('hit'),120);}};tb.addEventListener('pointerdown',fill);tb.addEventListener('touchstart',fill,{passive:false});tb.onclick=e=>e.preventDefault();}/* 다른 버튼·스틱을 누르고 있어도 바로 반응 */
-addEventListener('randfont',()=>{try{renderHome();}catch(e){}});
 function renderSel(){const c=document.getElementById('selCanvas'),cc=c.getContext('2d');cc.setTransform(1,0,0,1,0,0);cc.clearRect(0,0,104,104);cc.scale(2,2);drawBody(cc,chosen,26,28,15,Math.PI/2,HEROES[chosen].rarCol,false);
   document.getElementById('selName').textContent=HEROES[chosen].name;}
 function renderMaps(){
