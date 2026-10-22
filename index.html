@@ -79,6 +79,7 @@
 .h-slot.ready{background:rgba(93,255,138,.85)}
 .tb-btn:active,.tb-inv:active,.tb-blue:active,.tb-icon:active{transform:translateY(2px);box-shadow:0 2px 0 #14122a}
 @media (max-width:700px){#teamBox{grid-template-columns:0 1fr}.tb-panel{border-left:none}}
+#mmBox{position:fixed;inset:0;z-index:38;display:grid;place-items:center;background:rgba(10,8,30,.6)}
 #nickGate{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#1d1a3c;padding:16px}
 #ngIn{font:inherit;font-size:18px;text-align:center;color:#14122a;background:#fff;padding:10px;border-radius:8px;border:3px solid #14122a}
 .ng-msg{margin:0;min-height:1.2em;color:#ffd23f;font-size:14px}
@@ -668,6 +669,7 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
       <div class="tb-join" id="tbJoinRow" hidden><input id="tbJoinIn" maxlength="6" placeholder="팀 코드 6자리" autocomplete="off" aria-label="팀 코드"><button class="tb-blue" id="tbJoinGo">들어가기</button></div>
       <div class="tb-foot"><button class="tb-btn" id="tbCreate">생성</button><button class="tb-btn" id="tbJoin">참가</button><button class="tb-btn" id="tbShare">공유</button><button class="tb-btn tb-quick" id="tbQuick">빠른 참가</button></div>
     </div></div>
+    <div id="mmBox" hidden role="dialog" aria-modal="true" aria-labelledby="mmT"><div class="inv-card"><b id="mmT">공개 매치</b><p class="mm-s" id="mmText" role="status" style="margin:0;font-weight:700;font-size:17px"></p><p style="margin:0;font-size:12px;opacity:.85">사람이 모자라면 봇이 채워져요</p><button class="du-btn" id="mmCancel">취소</button></div></div>
     <div id="invBox" hidden role="dialog" aria-modal="true" aria-labelledby="invT"><div class="inv-card"><b id="invT">팀 초대</b><p id="invText" style="margin:0"></p><div class="du-row"><button class="du-btn gold" id="invYes">수락</button><button class="du-btn" id="invNo">거절</button></div></div></div>
     <div class="toast" id="toast" role="status" hidden></div>
     <div class="modal" id="setBox" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
@@ -2325,7 +2327,23 @@ function openTeamBox(){renderTeamBox();document.getElementById('tbJoinRow').hidd
 /* 팀 준비 완료 → 모두 준비되면 함께 시작 */
 function teamReadyInfo(){const B=window.BSO,r=B&&B.room;if(!r)return null;const ids=Object.keys(r.members);if(ids.length<2)return null;return{r,me:!!(r.members[r.me]&&r.members[r.me].ready)};}
 function updatePlayBtn(){const i=teamReadyInfo(),b=document.getElementById('hPlay');b.textContent=i?(i.me?'준비 취소':'준비 완료'):'플레이';b.classList.toggle('ready-on',!!(i&&i.me));}
-window.__teamPlay=()=>{const i=teamReadyInfo();if(!i)return startGame();window.BSO.setReady(!i.me).catch(e=>toast(e.message||'준비하지 못했어요'));};
+/* 3단계: 혼자 플레이 → 공개 매칭 (8초 대기 · 모자란 만큼 봇) */
+let mmTimer=null,mmTick=null;
+const mmSet=t=>{document.getElementById('mmText').textContent=t;};
+const mmWaiting=()=>{const B=window.BSO;if(!B||!B.online)return 0;let n=0;for(const u in B.presence)if(u!==B.uid&&B.presence[u].st==='매칭 중')n++;return n;};
+function mmStop(){clearTimeout(mmTimer);clearInterval(mmTick);mmTimer=mmTick=null;document.getElementById('mmBox').hidden=true;if(window.BSO&&window.BSO.online)window.BSO.setState('메뉴');}
+function startPublicMatch(){
+  if(duelSel)return startGame();
+  if(mmTimer)return;
+  document.getElementById('mmBox').hidden=false;
+  if(window.BSO&&window.BSO.online)window.BSO.setState('매칭 중');
+  let left=8;
+  const show=()=>{const h=mmWaiting();mmSet(h?'사람 '+h+'명 대기 중 · '+Math.max(0,left)+'초':'상대를 찾는 중… '+Math.max(0,left)+'초');};
+  show();mmTick=setInterval(()=>{left--;show();},1000);
+  mmTimer=setTimeout(()=>{const h=mmWaiting();mmStop();if(h)toast('온라인 대전은 준비 중이라 봇과 시작해요');startGame();},8000);
+}
+document.getElementById('mmCancel').addEventListener('click',()=>{mmStop();toast('매칭을 취소했어요');});
+window.__teamPlay=()=>{const i=teamReadyInfo();if(!i)return startPublicMatch();window.BSO.setReady(!i.me).catch(e=>toast(e.message||'준비하지 못했어요'));};
 bso(B=>{
   B.on('room',()=>updatePlayBtn());
   B.on('allReady',()=>{B.startTeam({mode:modeId,map:mapIdx,rand:mapRand||null}).catch(()=>{});});
