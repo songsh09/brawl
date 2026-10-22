@@ -1,0 +1,47 @@
+{
+  "rules": {
+    "presence": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "!newData.exists() || (newData.hasChildren(['code', 'nick', 't']) && newData.child('nick').isString() && newData.child('nick').val().length <= 12)"
+      }
+    },
+    "codes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.val() === auth.uid)",
+        ".validate": "!newData.exists() || newData.val() === auth.uid"
+      }
+    },
+    "invites": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$id": {
+          ".write": "auth != null && (auth.uid === $to || (!data.exists() && newData.child('from').val() === auth.uid))"
+        }
+      }
+    },
+    "rooms": {
+      ".read": "auth != null",
+      "$room": {
+        ".write": "auth != null && ((!data.exists() && newData.child('host').val() === auth.uid) || data.child('host').val() === auth.uid)",
+        "members": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      }
+    },
+    "signal": {
+      "$room": {
+        "$from": {
+          "$to": {
+            ".read": "auth != null && (auth.uid === $to || auth.uid === $from)",
+            ".write": "auth != null && auth.uid === $from"
+          }
+        }
+      }
+    }
+  }
+}
