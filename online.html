@@ -51,6 +51,32 @@
 .h-slot.filled{font-size:calc(var(--u)*1.6);font-family:var(--name);font-weight:900;color:#14122a;text-align:center;line-height:1.1;padding:2px;overflow:hidden;word-break:break-all}
 .ch-msg small{font-size:11px;opacity:.7}
 .pf-code{letter-spacing:3px}
+#teamBox{position:absolute;inset:0;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);z-index:34;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,min(560px,52%));background:rgba(10,8,30,.55)}
+.tb-panel{grid-column:2;display:flex;flex-direction:column;min-height:0;background:linear-gradient(180deg,#4a32c9,#2b1f93);background-image:linear-gradient(180deg,rgba(74,50,201,.96),rgba(43,31,147,.96)),radial-gradient(circle at 40px 40px,rgba(255,255,255,.06) 22px,transparent 23px);background-size:100% 100%,110px 110px;border-left:4px solid #14122a;color:#fff;font-family:var(--display)}
+.tb-head{display:flex;align-items:center;gap:10px;padding:12px 14px 8px}
+.tb-title{margin:0;flex:1;text-align:left;font-size:clamp(24px,3.4vw,34px);text-shadow:-2px -2px 0 #14122a,2px -2px 0 #14122a,-2px 2px 0 #14122a,2px 2px 0 #14122a,0 3px 0 #14122a}
+.tb-icon{appearance:none;cursor:pointer;width:52px;height:46px;border-radius:8px;border:3px solid #14122a;background:#2f7cf0;color:#fff;font-size:24px;box-shadow:0 4px 0 #14122a;display:grid;place-items:center}
+.tb-x{background:#e0393b}
+.tb-code{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 14px 6px;background:#14122a;border-radius:8px;padding:8px 12px;font-size:16px}
+.tb-code b{color:#ffd23f;letter-spacing:2px}
+.tb-leave{appearance:none;cursor:pointer;border:3px solid #14122a;border-radius:8px;background:#e0393b;color:#fff;font-family:var(--display);font-size:14px;padding:6px 10px}
+.tb-body{flex:1;min-height:0;overflow:auto;padding:4px 14px 10px;display:grid;gap:8px;align-content:start}
+.tb-sec{margin:8px 0 2px;font-size:19px;text-shadow:0 2px 0 #14122a}
+.tb-row{display:flex;align-items:center;gap:10px;background:#2f8ff0;border:3px solid #14122a;border-radius:6px;padding:8px 10px;box-shadow:0 3px 0 rgba(20,18,42,.5)}
+.tb-none{background:rgba(20,18,42,.45);box-shadow:none}
+.tb-av{width:44px;height:44px;flex:none;display:grid;place-items:center;border:3px solid #14122a;border-radius:6px;background:#1f4fb3;font-size:20px}
+.tb-info{display:grid;min-width:0;flex:1}.tb-info b{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 0 #14122a}.tb-info small{font-family:var(--name);font-size:12px;opacity:.85}
+.tb-st{font-size:15px;opacity:.9;white-space:nowrap}
+.tb-msg{flex:1;font-family:var(--name);font-weight:700;font-size:15px;opacity:.9}
+.tb-inv{appearance:none;cursor:pointer;flex:none;border:3px solid #14122a;border-radius:6px;background:linear-gradient(180deg,#3ee35a,#1fb83a);color:#fff;font-family:var(--display);font-size:18px;padding:8px 18px;text-shadow:0 2px 0 #14122a;box-shadow:0 4px 0 #14122a}
+.tb-blue{appearance:none;cursor:pointer;flex:none;border:3px solid #14122a;border-radius:6px;background:#2f7cf0;color:#fff;font-family:var(--display);font-size:17px;padding:8px 16px;box-shadow:0 4px 0 #14122a}
+.tb-empty{margin:0;font-family:var(--name);font-size:14px;opacity:.85}
+.tb-join{display:flex;gap:8px;padding:0 14px 8px}.tb-join input{flex:1;min-width:0;font:inherit;font-family:var(--display);font-size:17px;letter-spacing:2px;text-transform:uppercase;padding:8px;border-radius:8px;border:3px solid #14122a;color:#14122a;background:#fff}
+.tb-foot{display:grid;grid-template-columns:1fr 1fr 1fr 1.4fr;gap:8px;padding:8px 14px 12px}
+.tb-btn{appearance:none;cursor:pointer;border:3px solid #14122a;border-radius:8px;background:#2f7cf0;color:#fff;font-family:var(--display);font-size:clamp(15px,2vw,20px);padding:12px 6px;box-shadow:0 4px 0 #14122a;text-shadow:0 2px 0 #14122a}
+.tb-quick{background:linear-gradient(180deg,#ffe24a,#f5c518);color:#14122a;text-shadow:none}
+.tb-btn:active,.tb-inv:active,.tb-blue:active,.tb-icon:active{transform:translateY(2px);box-shadow:0 2px 0 #14122a}
+@media (max-width:700px){#teamBox{grid-template-columns:0 1fr}.tb-panel{border-left:none}}
 #nickGate{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#1d1a3c;padding:16px}
 #ngIn{font:inherit;font-size:18px;text-align:center;color:#14122a;background:#fff;padding:10px;border-radius:8px;border:3px solid #14122a}
 .ng-msg{margin:0;min-height:1.2em;color:#ffd23f;font-size:14px}
@@ -620,12 +646,11 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
         <div class="pf-left"><div class="pf-card"><canvas id="pfCanvas" width="300" height="300" aria-hidden="true"></canvas><span class="pf-cname"></span></div>
           <button class="pf-nick" id="pfNick" type="button"><span id="pfNickTxt">닉네임을 정해 주세요</span><small>눌러서 닉네임 수정</small></button>
           <form id="nickForm" hidden><label>닉네임<input id="nickIn" maxlength="12" autocomplete="off" placeholder="1~12자"></label><div class="du-row"><button type="button" class="du-btn" id="nickCancel">취소</button><button type="submit" class="du-btn gold">저장</button></div></form></div>
-        <div class="pf-right"><div class="pf-trophy"><span>트로피 진척도</span><b class="pf-tn">0</b></div><div class="pf-trophy"><span>친구 코드</span><b class="pf-tn pf-code" id="pfCode">-</b></div>
-          <p class="pf-help">닉네임을 정해야 채팅을 할 수 있어요.</p></div></div>
+        <div class="pf-right"><div class="pf-trophy"><span>트로피 진척도</span><b class="pf-tn">0</b></div><div class="pf-trophy"><span>친구 코드</span><b class="pf-tn pf-code" id="pfCode">-</b></div></div></div>
     </div>
     <div id="chatBox" hidden role="dialog" aria-modal="true" aria-labelledby="chTitle"><div class="mbox full-box">
       <p class="full-title" id="chTitle">전체 채팅</p><button class="mclose full-x" data-close="chatBox" aria-label="닫기"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></button>
-      <div class="ch-wrap"><div class="ch-notice" id="chatNotice" hidden><p style="margin:0">채팅하려면 먼저 닉네임을 정해 주세요.</p><button class="du-btn gold" id="chNickBtn">닉네임 정하기</button></div>
+      <div class="ch-wrap">
         <div class="ch-list" id="chatList"></div>
         <form class="ch-form" id="chatForm"><input id="chatIn" maxlength="120" placeholder="메시지를 입력하세요" autocomplete="off" aria-label="메시지"><button class="du-btn gold" type="submit">보내기</button></form></div>
     </div></div>
@@ -634,6 +659,13 @@ body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
       <div class="full-body" id="onList"></div>
     </div></div>
     <div id="nickGate" hidden role="dialog" aria-modal="true" aria-labelledby="ngT"><form class="inv-card" id="ngForm"><b id="ngT">닉네임을 정해 주세요</b><p style="margin:0">채팅과 전투에서 다른 사람에게 보이는 이름이에요. 닉네임을 정해야 게임을 할 수 있어요.</p><input id="ngIn" maxlength="12" autocomplete="off" placeholder="1~12자" aria-label="닉네임"><p id="ngMsg" class="ng-msg" role="status"></p><button class="du-btn gold" type="submit">시작하기</button></form></div>
+    <div id="teamBox" hidden role="dialog" aria-modal="true" aria-labelledby="tbT"><div class="tb-panel">
+      <div class="tb-head"><p class="tb-title" id="tbT">팀 구성</p><button class="tb-icon" id="tbSet" aria-label="설정">⚙</button><button class="tb-icon tb-x" id="tbClose" aria-label="닫기">✕</button></div>
+      <div class="tb-code" id="tbCode" hidden><span>팀 코드 <b id="tbCodeTxt"></b></span><button class="tb-leave" id="tbLeave">팀 나가기</button></div>
+      <div class="tb-body" id="tbBody"></div>
+      <div class="tb-join" id="tbJoinRow" hidden><input id="tbJoinIn" maxlength="6" placeholder="팀 코드 6자리" autocomplete="off" aria-label="팀 코드"><button class="tb-blue" id="tbJoinGo">들어가기</button></div>
+      <div class="tb-foot"><button class="tb-btn" id="tbCreate">생성</button><button class="tb-btn" id="tbJoin">참가</button><button class="tb-btn" id="tbShare">공유</button><button class="tb-btn tb-quick" id="tbQuick">빠른 참가</button></div>
+    </div></div>
     <div id="invBox" hidden role="dialog" aria-modal="true" aria-labelledby="invT"><div class="inv-card"><b id="invT">팀 초대</b><p id="invText" style="margin:0"></p><div class="du-row"><button class="du-btn gold" id="invYes">수락</button><button class="du-btn" id="invNo">거절</button></div></div></div>
     <div class="toast" id="toast" role="status" hidden></div>
     <div class="modal" id="setBox" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
@@ -2185,9 +2217,6 @@ function renderChat(){
   box.scrollTop=box.scrollHeight;
 }
 function openChat(){
-  const nick=window.__getNick();
-  document.getElementById('chatNotice').hidden=!!nick;
-  document.getElementById('chatForm').hidden=!nick;
   document.getElementById('chatBox').hidden=false;
   renderChat();
 }
@@ -2199,7 +2228,6 @@ document.getElementById('chatForm').addEventListener('submit',e=>{
   if(!window.BSO||!window.BSO.online){toast('온라인에 연결되지 않았어요');return;}
   window.BSO.sendChat(text).then(()=>{input.value='';}).catch(err=>toast(err.message||'채팅을 보내지 못했어요'));
 });
-document.getElementById('chNickBtn').addEventListener('click',()=>{document.getElementById('chatBox').hidden=true;needNick();});
 /* 초대 받기 */
 const invQ=[];
 function showInvite(){
@@ -2227,8 +2255,68 @@ for(const s of document.querySelectorAll('.h-right .side')){
   if(t==='클럽'){s.style.cursor='pointer';s.addEventListener('click',openChat);}
   if(t==='친구'){s.style.cursor='pointer';s.addEventListener('click',openOnline);}
 }
-for(const s of document.querySelectorAll('.h-slot')){s.style.cursor='pointer';s.setAttribute('aria-hidden','false');s.setAttribute('role','button');s.addEventListener('click',openOnline);}
+for(const s of document.querySelectorAll('.h-slot')){s.style.cursor='pointer';s.setAttribute('aria-hidden','false');s.setAttribute('role','button');s.addEventListener('click',()=>openTeamBox());}
 document.getElementById('gmFriendBattle').addEventListener('click',()=>toast('준비 중인 기능이에요'));
+/* ---- 팀 구성 창 (+ 버튼) ---- */
+const ST_LABEL=s=>s==='전투 중'?'전투 중':s==='오프라인'?'오프라인':'메뉴 화면';
+const getRecent=()=>{try{return JSON.parse(localStorage.getItem('bs_recent')||'[]');}catch(e){return[];}};
+function rememberTeam(r){
+  if(!r)return;let rec=getRecent();
+  for(const u in r.members){if(u===r.me)continue;const m=r.members[u];if(!m.code)continue;rec=rec.filter(x=>x.code!==m.code);rec.unshift({code:m.code,nick:m.nick||'?'});}
+  rec=rec.slice(0,10);try{localStorage.setItem('bs_recent',JSON.stringify(rec));}catch(e){}
+}
+function tbRow(nick,code,sub,uid,canInvite){
+  const row=el('div','tb-row');
+  const av=el('span','tb-av',(nick||'?').slice(0,1));
+  const info=el('div','tb-info');info.append(el('b',null,nick||'닉네임 없음'),el('small',null,code||''));
+  row.append(av,info,el('span','tb-st',sub));
+  if(canInvite){const b=el('button','tb-inv','초대');b.type='button';b.addEventListener('click',()=>{window.BSO.invite(uid).then(()=>{toast('초대를 보냈어요');renderTeamBox();}).catch(e=>toast(e.message||'초대하지 못했어요'));});row.append(b);}
+  return row;
+}
+function renderTeamBox(){
+  const body=document.getElementById('tbBody');if(!body)return;body.textContent='';
+  const B=window.BSO;
+  const codeEl=document.getElementById('tbCode');
+  if(!B||!B.online){codeEl.hidden=true;body.append(el('p','tb-empty','온라인에 연결하는 중이에요… 인터넷 연결을 확인해 주세요.'));return;}
+  const r=B.room,pres=B.presence||{},inTeam=u=>!!(r&&r.members[u]);
+  codeEl.hidden=!r;
+  if(r){document.getElementById('tbCodeTxt').textContent=r.id+' · '+Object.keys(r.members).length+'/3명';}
+  /* 친구 */
+  body.append(el('p','tb-sec','친구'));
+  const on=[];for(const c of getFriends()){const u=B.uidByCode(c);if(u&&u!==B.uid)on.push(u);}
+  if(!on.length){
+    const box=el('div','tb-row tb-none');box.append(el('span','tb-av','·'),el('span','tb-msg','온라인 상태인 친구가 없습니다.'));
+    const fb=el('button','tb-blue','친구');fb.type='button';fb.addEventListener('click',()=>{document.getElementById('teamBox').hidden=true;openOnline();});box.append(fb);body.append(box);
+  }else for(const u of on)body.append(tbRow(pres[u].nick,pres[u].code,inTeam(u)?'팀원':ST_LABEL(pres[u].st),u,!inTeam(u)));
+  /* 최근 팀원 */
+  body.append(el('p','tb-sec','최근 팀원'));
+  const rec=getRecent();
+  if(!rec.length)body.append(el('p','tb-empty','아직 함께한 팀원이 없어요.'));
+  for(const x of rec){const u=B.uidByCode(x.code),online=!!(u&&u!==B.uid);
+    body.append(tbRow(online?pres[u].nick:x.nick,x.code,online?(inTeam(u)?'팀원':ST_LABEL(pres[u].st)):'오프라인',u,online&&!inTeam(u)));}
+}
+function openTeamBox(){renderTeamBox();document.getElementById('tbJoinRow').hidden=true;document.getElementById('teamBox').hidden=false;}
+{const tb=document.getElementById('teamBox');
+  tb.addEventListener('click',e=>{if(e.target===tb)tb.hidden=true;});
+  document.getElementById('tbClose').addEventListener('click',()=>{tb.hidden=true;});
+  document.getElementById('tbSet').addEventListener('click',()=>{tb.hidden=true;document.getElementById('gmSet').click();});
+  const need=()=>{if(!window.BSO||!window.BSO.online){toast('온라인에 연결되지 않았어요');return false;}return true;};
+  document.getElementById('tbCreate').addEventListener('click',()=>{if(!need())return;window.BSO.createRoom().then(()=>renderTeamBox()).catch(e=>toast(e.message||'팀을 만들지 못했어요'));});
+  document.getElementById('tbJoin').addEventListener('click',()=>{const row=document.getElementById('tbJoinRow');row.hidden=!row.hidden;if(!row.hidden)document.getElementById('tbJoinIn').focus();});
+  document.getElementById('tbJoinGo').addEventListener('click',()=>{if(!need())return;const c=document.getElementById('tbJoinIn').value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(c)){toast('팀 코드 6자리를 입력해 주세요');return;}window.BSO.joinByCode(c).then(()=>{document.getElementById('tbJoinRow').hidden=true;renderTeamBox();}).catch(e=>toast(e.message||'팀에 들어가지 못했어요'));});
+  document.getElementById('tbJoinIn').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('tbJoinGo').click();});
+  document.getElementById('tbShare').addEventListener('click',async()=>{if(!need())return;
+    try{if(!window.BSO.room)await window.BSO.createRoom();}catch(e){toast(e.message||'팀을 만들지 못했어요');return;}
+    const code=window.BSO.room.id,url=location.origin+location.pathname+'?team='+code,text='브롤스타즈 팀 코드: '+code;
+    try{if(navigator.share){await navigator.share({title:'브롤스타즈 팀 초대',text,url});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+    try{await navigator.clipboard.writeText(text+'\n'+url);toast('팀 코드와 링크를 복사했어요');}catch(e){toast('팀 코드: '+code);}
+    renderTeamBox();});
+  document.getElementById('tbQuick').addEventListener('click',()=>{if(!need())return;window.BSO.quickJoin().then(made=>{toast(made?'자리가 있는 팀이 없어서 새 팀을 만들었어요':'팀에 들어갔어요');renderTeamBox();}).catch(e=>toast(e.message||'빠른 참가에 실패했어요'));});
+  document.getElementById('tbLeave').addEventListener('click',()=>{if(window.BSO)window.BSO.leaveRoom();});
+}
+/* 접속 상태(전투 중 / 메뉴 화면) 알리기 */
+{let lastSt='';setInterval(()=>{const s=state==='play'?'전투 중':'메뉴';if(s!==lastSt&&window.BSO&&window.BSO.online&&window.BSO.setState){lastSt=s;window.BSO.setState(s);}},1500);}
+bso(B=>{B.on('room',r=>{rememberTeam(r);if(!document.getElementById('teamBox').hidden)renderTeamBox();});B.on('presence',()=>{if(!document.getElementById('teamBox').hidden)renderTeamBox();});B.on('ready',()=>{const t=new URLSearchParams(location.search).get('team');if(t&&/^[A-Za-z0-9]{6}$/.test(t))B.joinByCode(t.toUpperCase()).then(()=>toast('팀에 들어왔어요')).catch(e=>toast(e.message||'팀에 들어가지 못했어요'));});});
 
 
   document.getElementById('setClose').addEventListener('click',close);box.addEventListener('click',e=>{if(e.target===box)close();});
@@ -5168,7 +5256,7 @@ async function claimCode() {
   }
   throw new Error('친구 코드를 만들지 못했어요');
 }
-function presenceData() { return { code: myCode, nick: nick() || '닉네임 없음', st: roomId ? '팀' : st, t: serverTimestamp() }; }
+function presenceData() { return { code: myCode, nick: nick() || '닉네임 없음', st, team: roomId ? 1 : 0, t: serverTimestamp() }; }
 function goOnline() {
   const pref = ref(db, 'presence/' + me);
   onValue(ref(db, '.info/connected'), async s => {
@@ -5210,10 +5298,7 @@ BSO.invite = async uid => {
 BSO.decline = async inv => { await remove(ref(db, 'invites/' + me + '/' + inv.key)).catch(() => {}); };
 BSO.accept = async inv => {
   await remove(ref(db, 'invites/' + me + '/' + inv.key)).catch(() => {});
-  const snap = await get(ref(db, 'rooms/' + inv.room));
-  if (!snap.exists()) throw new Error('팀이 이미 사라졌어요');
-  await leaveRoom();
-  await joinRoom(inv.room);
+  await joinChecked(inv.room);
 };
 
 /* ---------- 팀(방) · 방장 위임 · WebRTC ---------- */
@@ -5224,16 +5309,37 @@ function publishRoom() {
   BSO.room = { id: roomId, host: hostUid, isHost, members: lastMembers, connected: conn, me };
   emit('room', BSO.room);
 }
+const TEAM_MAX = 3;
 async function createRoom() {
   await leaveRoom();
-  const r = push(ref(db, 'rooms'));
-  await set(r, { host: me, t: serverTimestamp(), members: { [me]: { nick: nick() || '닉네임 없음', j: serverTimestamp() } } });
-  await enterRoom(r.key, true);
-  emit('log', '팀을 만들었어요');
+  for (let i = 0; i < 8; i++) {
+    const code = newCode();
+    const res = await runTransaction(ref(db, 'rooms/' + code), cur => cur === null ? { host: me, t: Date.now(), members: { [me]: { nick: nick() || '닉네임 없음', j: Date.now(), code: myCode } } } : undefined);
+    if (res.committed && res.snapshot.child('host').val() === me) { await enterRoom(code, true); emit('log', '팀을 만들었어요'); return code; }
+  }
+  throw new Error('팀을 만들지 못했어요');
 }
+async function joinChecked(id) {
+  const snap = await get(ref(db, 'rooms/' + id));
+  if (!snap.exists()) throw new Error('팀을 찾을 수 없어요');
+  const m = snap.child('members').val() || {};
+  if (m[me] && roomId === id) return;
+  if (Object.keys(m).length >= TEAM_MAX) throw new Error('팀이 가득 찼어요');
+  await leaveRoom();
+  await joinRoom(id);
+}
+BSO.joinByCode = async code => { await BSO.ready; await joinChecked(String(code).toUpperCase()); };
+BSO.quickJoin = async () => {
+  await BSO.ready;
+  const snap = await get(query(ref(db, 'rooms'), limitToLast(40)));
+  const ids = [];
+  snap.forEach(c => { const m = c.child('members').val() || {}; const n = Object.keys(m).length; if (n > 0 && n < TEAM_MAX && !m[me] && c.key !== roomId) ids.push(c.key); });
+  for (const id of ids.sort(() => Math.random() - .5)) { try { await joinChecked(id); return false; } catch (e) {} }
+  await createRoom(); return true;
+};
 async function joinRoom(id) {
   const mref = ref(db, 'rooms/' + id + '/members/' + me);
-  await set(mref, { nick: nick() || '닉네임 없음', j: serverTimestamp() });
+  await set(mref, { nick: nick() || '닉네임 없음', j: Date.now(), code: myCode });
   await onDisconnect(mref).remove();
   await enterRoom(id, false);
   emit('log', '팀에 들어왔어요');
