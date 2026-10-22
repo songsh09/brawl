@@ -30,6 +30,12 @@
           "$uid": {
             ".write": "auth != null && auth.uid === $uid"
           }
+        },
+        "chat": {
+          "$id": {
+            ".write": "auth != null && !data.exists() && newData.child('from').val() === auth.uid && root.child('rooms').child($room).child('members').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['from', 'nick', 'text', 't']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 200 && newData.child('nick').isString() && newData.child('nick').val().length <= 12 && newData.child('t').val() === now"
+          }
         }
       }
     },
