@@ -140,7 +140,7 @@
 </head><body>
 <title>브롤스타즈</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;600;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;600;700;900&display=block">
 <style>
 /* Layout: one full-screen canvas arena; HTML overlays for hero/map select and results. Single dark arcade look. */
 :root{
@@ -3491,9 +3491,15 @@ function drawSummonFront(c,k,x,y,S){const O='#14122a',lw=Math.max(1.2,S*.05);c.s
     Q(x,g-S*.78,S*.36,S*.3,S*.06,'#f0a020');Q(x,g-S*.73,S*.26,S*.17,S*.03,'#1d2033');eyes(x,g-S*.65,S*.06,S*.035,'#9ff3ff');}
   else if(t==='portal'){c.lineWidth=lw*1.6;for(const dx of[-.18,.2]){c.strokeStyle='#8f5bd6';c.fillStyle='rgba(143,91,214,.35)';c.beginPath();c.ellipse(x+S*dx,g-S*.3,S*.13,S*.3,0,0,TAU);c.fill();c.stroke();}}
   c.restore();}
-/* 물음표 모양(Black Han Sans의 '?'를 도형으로 옮김: 글꼴을 받았는지와 상관없이 항상 같은 모양) — 글자 크기 1, 가운데 정렬, 기준선 0 */
-const Q_PATH=new Path2D('M-0.0205 -0.178Q0.0195 -0.178 0.046 -0.152Q0.0725 -0.126 0.0725 -0.084Q0.0725 -0.042 0.046 -0.016Q0.0195 0.01 -0.0205 0.01Q-0.0605 0.01 -0.0875 -0.017Q-0.1145 -0.044 -0.1145 -0.084Q-0.1145 -0.126 -0.0875 -0.152Q-0.0605 -0.178 -0.0205 -0.178ZM0.1905 -0.573Q0.1905 -0.537 0.186 -0.508Q0.1815 -0.479 0.172 -0.453Q0.1625 -0.427 0.147 -0.4015Q0.1315 -0.376 0.1105 -0.347Q0.0835 -0.311 0.0705 -0.2855Q0.0575 -0.26 0.0575 -0.225H-0.1025Q-0.1025 -0.259 -0.098 -0.2855Q-0.0935 -0.312 -0.085 -0.335Q-0.0765 -0.358 -0.0635 -0.379Q-0.0505 -0.4 -0.0345 -0.423Q-0.0195 -0.444 -0.0095 -0.461Q0.0005 -0.478 0.0075 -0.4945Q0.0145 -0.511 0.0175 -0.529Q0.0205 -0.547 0.0205 -0.569V-0.57Q0.0205 -0.59 -0.0005 -0.59Q-0.0205 -0.59 -0.0205 -0.57V-0.516L-0.1805 -0.506L-0.1905 -0.573Q-0.1905 -0.657 -0.1405 -0.7035Q-0.0905 -0.75 -0.0005 -0.75Q0.0905 -0.75 0.1405 -0.7035Q0.1905 -0.657 0.1905 -0.573Z');
-const qAt=(x,y,fs)=>{const p=new Path2D();p.addPath(Q_PATH,new DOMMatrix([fs,0,0,fs,x,y]));return p;};
+/* 메뉴 그림에 쓰는 글자를 Black Han Sans 모양 그대로 도형으로 옮김: 글꼴을 받았는지와 상관없이 항상 같은 모양
+   [글자 폭, 모양] — 글자 크기 1, 기준선 0. 여기 없는 글자는 쓰지 않음 */
+const GLYPHS={"봇":[0.84,"M0.514 -0.389H0.78V-0.258H0.06V-0.389H0.326V-0.428H0.08V-0.752H0.268V-0.709H0.575V-0.752H0.763V-0.428H0.514ZM0.268 -0.586V-0.551H0.575V-0.586ZM0.514 -0.225Q0.518 -0.184 0.551 -0.163Q0.584 -0.142 0.6365 -0.136Q0.689 -0.13 0.77 -0.13L0.75 0Q0.525 0 0.42 -0.066Q0.315 0 0.09 0L0.07 -0.13Q0.151 -0.13 0.2035 -0.136Q0.256 -0.142 0.289 -0.163Q0.322 -0.184 0.326 -0.225Z"],"전":[0.815,"M0.567 -0.265V-0.452H0.501V-0.602H0.567V-0.76H0.754V-0.265ZM0.269 -0.413Q0.229 -0.373 0.1775 -0.3515Q0.126 -0.33 0.07 -0.33L0.04 -0.48Q0.091 -0.48 0.1255 -0.5085Q0.16 -0.537 0.171 -0.602H0.055V-0.752H0.481V-0.602H0.366Q0.377 -0.537 0.4115 -0.5085Q0.446 -0.48 0.497 -0.48L0.467 -0.33Q0.411 -0.33 0.3595 -0.3515Q0.308 -0.373 0.269 -0.413ZM0.263 -0.15H0.755V0H0.075V-0.285H0.263Z"],"한":[0.837,"M0.379 -0.72V-0.78H0.191V-0.72H0.06V-0.598H0.51V-0.72ZM0.762 -0.76H0.574V-0.246H0.762V-0.421H0.837V-0.571H0.762ZM0.238 -0.58Q0.162 -0.58 0.116 -0.539Q0.07 -0.498 0.07 -0.43Q0.07 -0.362 0.116 -0.321Q0.162 -0.28 0.238 -0.28H0.332Q0.408 -0.28 0.454 -0.321Q0.5 -0.362 0.5 -0.43Q0.5 -0.498 0.454 -0.539Q0.408 -0.58 0.332 -0.58ZM0.262 -0.406Q0.251 -0.406 0.244 -0.413Q0.237 -0.42 0.237 -0.431Q0.237 -0.442 0.244 -0.449Q0.251 -0.456 0.262 -0.456H0.309Q0.32 -0.456 0.327 -0.449Q0.334 -0.442 0.334 -0.431Q0.334 -0.42 0.327 -0.413Q0.32 -0.406 0.309 -0.406ZM0.08 -0.246V0L0.762 -0.001V-0.141H0.268V-0.246Z"],"기":[0.82,"M0.572 -0.76V0H0.76V-0.76ZM0.07 -0.03Q0.193 -0.03 0.2875 -0.1Q0.382 -0.17 0.4345 -0.2995Q0.487 -0.429 0.487 -0.602V-0.752H0.06V-0.602H0.299Q0.299 -0.447 0.259 -0.3525Q0.219 -0.258 0.162 -0.219Q0.105 -0.18 0.05 -0.18Z"],"온":[0.84,"M0.78 -0.389V-0.248H0.06V-0.389H0.326V-0.426H0.247Q0.172 -0.426 0.126 -0.471Q0.08 -0.516 0.08 -0.59Q0.08 -0.664 0.126 -0.709Q0.172 -0.754 0.247 -0.754H0.593Q0.668 -0.754 0.714 -0.709Q0.76 -0.664 0.76 -0.59Q0.76 -0.516 0.714 -0.471Q0.668 -0.426 0.593 -0.426H0.514V-0.389ZM0.268 -0.591Q0.268 -0.581 0.275 -0.574Q0.282 -0.567 0.292 -0.567H0.548Q0.559 -0.567 0.5655 -0.574Q0.572 -0.581 0.572 -0.591Q0.572 -0.601 0.5655 -0.6075Q0.559 -0.614 0.548 -0.614H0.292Q0.281 -0.614 0.2745 -0.6075Q0.268 -0.601 0.268 -0.591ZM0.268 -0.208V-0.15H0.76V0H0.08V-0.208Z"],"라":[0.835,"M0.76 -0.76H0.572V0H0.76V-0.321H0.835V-0.471H0.76ZM0.485 -0.75H0.06V-0.6H0.298V-0.47H0.06V-0.03H0.505V-0.18H0.248V-0.32H0.485Z"],"인":[0.823,"M0.574 -0.76V-0.226H0.762V-0.76ZM0.284 -0.75Q0.173 -0.75 0.1165 -0.6915Q0.06 -0.633 0.06 -0.518Q0.06 -0.403 0.1165 -0.3445Q0.173 -0.286 0.284 -0.286Q0.395 -0.286 0.4515 -0.3445Q0.508 -0.403 0.508 -0.518Q0.508 -0.633 0.4515 -0.6915Q0.395 -0.75 0.284 -0.75ZM0.284 -0.6Q0.321 -0.6 0.321 -0.562V-0.474Q0.321 -0.436 0.284 -0.436Q0.247 -0.436 0.247 -0.474V-0.562Q0.247 -0.6 0.284 -0.6ZM0.08 -0.246V0H0.763V-0.151H0.268V-0.246Z"]," ":[0.3,""],"?":[0.421,"M0.19 -0.178Q0.23 -0.178 0.2565 -0.152Q0.283 -0.126 0.283 -0.084Q0.283 -0.042 0.2565 -0.016Q0.23 0.01 0.19 0.01Q0.15 0.01 0.123 -0.017Q0.096 -0.044 0.096 -0.084Q0.096 -0.126 0.123 -0.152Q0.15 -0.178 0.19 -0.178ZM0.401 -0.573Q0.401 -0.537 0.3965 -0.508Q0.392 -0.479 0.3825 -0.453Q0.373 -0.427 0.3575 -0.4015Q0.342 -0.376 0.321 -0.347Q0.294 -0.311 0.281 -0.2855Q0.268 -0.26 0.268 -0.225H0.108Q0.108 -0.259 0.1125 -0.2855Q0.117 -0.312 0.1255 -0.335Q0.134 -0.358 0.147 -0.379Q0.16 -0.4 0.176 -0.423Q0.191 -0.444 0.201 -0.461Q0.211 -0.478 0.218 -0.4945Q0.225 -0.511 0.228 -0.529Q0.231 -0.547 0.231 -0.569V-0.57Q0.231 -0.59 0.21 -0.59Q0.19 -0.59 0.19 -0.57V-0.516L0.03 -0.506L0.02 -0.573Q0.02 -0.657 0.07 -0.7035Q0.12 -0.75 0.21 -0.75Q0.301 -0.75 0.351 -0.7035Q0.401 -0.657 0.401 -0.573Z"]};
+const GP={};
+function glyphPath(str,x,y,fs,align){let w=0;for(const ch of str)w+=(GLYPHS[ch]||GLYPHS[' '])[0];
+  let px=x-(align==='center'?w/2:align==='right'?w:0)*fs;const p=new Path2D();
+  for(const ch of str){const g=GLYPHS[ch]||GLYPHS[' '];if(g[1])p.addPath(GP[ch]||(GP[ch]=new Path2D(g[1])),new DOMMatrix([fs,0,0,fs,px,y]));px+=g[0]*fs;}return p;}
+const qAt=(x,y,fs)=>glyphPath('?',x,y,fs,'center');
+const MID=.29;/* textBaseline 'middle' → 기준선까지 (글자 크기 비율) */
 function drawRandFront(c,cx,cy,S){/* 랜덤: 입체 물음표 하나 */const O='#14122a';c.save();const foot=cy+S*.43;
   c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.ellipse(cx,foot+S*.01,S*.2,S*.045,0,0,TAU);c.fill();
   const fs=Math.round(S*.95),x=cx,y=foot-S*.04;c.lineJoin='round';
@@ -5520,7 +5526,7 @@ function drawMap(c,m,rot){const R2=m.rows.length,C2=m.rows[0].length,W2=rot?R2:C
 function drawModeIcon(c,id){const x=c.getContext('2d'),S=c.width;x.clearRect(0,0,S,S);x.save();x.translate(S/2,S/2);const r=S*.42;
   x.fillStyle='#fff';x.strokeStyle='#14122a';x.lineWidth=S*.06;arc0(x,0,0,r);x.fill();x.stroke();
   const col=MODE_COL[id]||'#7b6cff';x.fillStyle=col;x.strokeStyle='#14122a';x.lineWidth=S*.04;const q=r*.62;x.beginPath();
-  if(id==='rand'){x.font=`${Math.round(S*.62)}px "Black Han Sans",sans-serif`;x.textAlign='center';x.textBaseline='middle';x.lineWidth=S*.05;x.strokeText('?',0,S*.03);x.fillStyle=col;x.fillText('?',0,S*.03);x.restore();return;}
+  if(id==='rand'){const fs=Math.round(S*.62),q=qAt(0,S*.03+fs*MID,fs);x.lineWidth=S*.05;x.stroke(q);x.fillStyle=col;x.fill(q);x.restore();return;}
   const O='#14122a',lw=S*.04,E=(cx,cy,rx,ry,f)=>{x.fillStyle=f;x.beginPath();x.ellipse(cx,cy,rx,ry,0,0,TAU);x.fill();x.stroke();},
     PL=(pts,f)=>{x.fillStyle=f;x.beginPath();pts.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));x.closePath();x.fill();x.stroke();},
     RQ=(cx,cy,w,h,rad,f)=>{x.fillStyle=f;x.beginPath();x.roundRect(cx-w/2,cy-h/2,w,h,rad);x.fill();x.stroke();};
@@ -5558,8 +5564,8 @@ function drawModeIcon(c,id){const x=c.getContext('2d'),S=c.width;x.clearRect(0,0
   /* sd 기본 */  x.closePath();x.fill();x.stroke();x.restore();}
 const MODE_ORDER=['gem','sd','heist','bounty','ball','zone','ko','dm'];
 function drawRandBanner(c,id){const x=c.getContext('2d');x.fillStyle=id==='rand'?'#4b3fa8':(MODE_COL[id]||'#7b6cff');x.fillRect(0,0,c.width,c.height);
-  x.globalAlpha=.18;x.fillStyle='#fff';for(let i=0;i<8;i++){x.font=`${40+i*7}px "Black Han Sans",sans-serif`;x.fillText('?',(i*67)%c.width,30+(i*53)%c.height);}x.globalAlpha=1;
-  x.font=`${Math.round(c.height*.6)}px "Black Han Sans",sans-serif`;x.textAlign='center';x.textBaseline='middle';x.lineWidth=8;x.strokeStyle='#14122a';x.strokeText('?',c.width/2,c.height/2+4);x.fillStyle='#ffd23f';x.fillText('?',c.width/2,c.height/2+4);x.textAlign='left';x.textBaseline='alphabetic';}
+  x.globalAlpha=.18;x.fillStyle='#fff';for(let i=0;i<8;i++)x.fill(glyphPath('?',(i*67)%c.width,30+(i*53)%c.height,40+i*7,'left'));x.globalAlpha=1;
+  {const fs=Math.round(c.height*.6),q=qAt(c.width/2,c.height/2+4+fs*MID,fs);x.lineWidth=8;x.strokeStyle='#14122a';x.stroke(q);x.fillStyle='#ffd23f';x.fill(q);}}
 function evCard(id,title,sub,pressed,onSel,onInfo,banner){const b=document.createElement('div');b.className='ev';b.style.setProperty('--mc',id==='rand'?'#7b6cff':(MODE_COL[id]||'#7b6cff'));
   const sel=document.createElement('button');sel.className='ev-sel';sel.setAttribute('aria-pressed',String(pressed));sel.setAttribute('aria-label',title+' · '+sub);
   const hd=document.createElement('span');hd.className='ev-hd';const ic=document.createElement('canvas');ic.width=96;ic.height=96;drawModeIcon(ic,id);
@@ -5569,7 +5575,7 @@ function evCard(id,title,sub,pressed,onSel,onInfo,banner){const b=document.creat
   return b;}
 const DUEL_KINDS=[['bot','봇전','1대1 · 봇과 대결'],['local','한 기기','1대1 · 한 기기로 둘이서'],['online','온라인','1대1 · 친구와 각자 기기로']];
 function duelBanner(cv,nm){const x=cv.getContext('2d');x.fillStyle=shade(MODE_COL.duel,.72);x.fillRect(0,0,cv.width,cv.height);const ic=document.createElement('canvas');ic.width=140;ic.height=140;drawModeIcon(ic,'duel');x.drawImage(ic,cv.width/2-70,cv.height/2-88);
-  x.font='34px "Black Han Sans",sans-serif';x.textAlign='center';x.lineWidth=7;x.strokeStyle='#14122a';x.strokeText(nm,cv.width/2,cv.height-22);x.fillStyle='#fff';x.fillText(nm,cv.width/2,cv.height-22);x.textAlign='left';}
+  {const q=glyphPath(nm,cv.width/2,cv.height-22,34,'center');x.lineWidth=7;x.strokeStyle='#14122a';x.stroke(q);x.fillStyle='#fff';x.fill(q);}}
 /* 듀얼 종류를 누르면 그 듀얼의 맵을 일반 맵처럼 보여줌 */
 function renderDuelMaps(ev){const[dk,nm]=DUEL_KINDS.find(d=>d[0]===duelView);
   const pick=mi=>{if(dk==='bot'){duelSel={kind:'bot',mi};renderEvents();scr('scrHome');}else beginPick(dk,mi);};
