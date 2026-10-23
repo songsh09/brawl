@@ -23,7 +23,7 @@
 ## Firebase 규칙
 - 규칙 원본은 `database.rules.json`. **바꿔서 main에 올리면 GitHub Actions(`.github/workflows/firebase-rules.yml`)가 Firebase에 자동 적용**한다.
   - 저장소 비밀 값 `FIREBASE_SERVICE_ACCOUNT`(서비스 계정 키 JSON)가 있어야 동작. 없으면 적용을 건너뜀.
-  - 적용 뒤 실제 Firebase 규칙을 읽어 와서 결과를 `firebase-status` 브랜치에 남긴다: `git fetch origin firebase-status && git show origin/firebase-status:status.json`
+  - 적용 뒤 실제 Firebase 규칙을 읽어 와서 결과를 `firebase-status` 브랜치에 남긴다: `git fetch origin +refs/heads/firebase-status:refs/remotes/origin/firebase-status && git show origin/firebase-status:status.json`
     (`deploy`가 `success`이고 `same`이 `true`면 적용 완료. `live-rules.json`은 실제 적용된 규칙.)
   - 자동 적용이 실패했거나 비밀 값이 없으면, 사용자에게 규칙 파일을 보내고 Firebase 콘솔 → Realtime Database → 규칙에 붙여넣어 게시하라고 안내한다.
 - 새 경로를 쓰는 기능을 만들면 규칙도 함께 고친다(쓰기 권한이 없으면 실제 서비스에서 조용히 실패함).
