@@ -1,6 +1,7 @@
 # database.rules.json 이 바뀌어 main 에 올라가면 Firebase Realtime Database 규칙에 자동으로 적용
 # 필요한 것: 저장소 Settings → Secrets and variables → Actions 에
 #   FIREBASE_SERVICE_ACCOUNT = Firebase 서비스 계정 키(JSON 파일 내용 전체)
+# 적용 뒤 실제로 적용된 규칙을 읽어 와서, 결과를 firebase-status 브랜치(status.json, live-rules.json)에 남김
 name: Firebase 규칙 적용
 
 on:
@@ -10,11 +11,15 @@ on:
       - database.rules.json
       - firebase.json
       - .github/workflows/firebase-rules.yml
+      - .github/check-rules.mjs
   workflow_dispatch:
 
 concurrency:
   group: firebase-rules
   cancel-in-progress: false
+
+permissions:
+  contents: write
 
 jobs:
   deploy-rules:
@@ -39,12 +44,42 @@ jobs:
         with:
           node-version: 20
 
-      - name: 규칙 적용
+      - name: 키 파일 준비
         if: steps.key.outputs.ok == 'true'
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+
+      - name: 규칙 적용
+        id: deploy
+        if: steps.key.outputs.ok == 'true'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: npx --yes firebase-tools@13 deploy --only database --project brawl090417 --non-interactive
+
+      - name: 적용된 규칙 확인
+        if: always() && steps.key.outputs.ok == 'true'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
         run: |
-          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
-          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
-          npx --yes firebase-tools@13 deploy --only database --project brawl090417 --non-interactive
+          npm install --no-save --silent google-auth-library@9
+          node .github/check-rules.mjs
+
+      - name: 결과를 firebase-status 브랜치에 남기기
+        if: always() && steps.key.outputs.ok == 'true'
+        run: |
           rm -f "$RUNNER_TEMP/sa.json"
+          mkdir -p "$RUNNER_TEMP/out"
+          cp status.json "$RUNNER_TEMP/out/" 2>/dev/null || echo '{"error":"no status"}' > "$RUNNER_TEMP/out/status.json"
+          cp live-rules.json "$RUNNER_TEMP/out/" 2>/dev/null || true
+          cd "$RUNNER_TEMP/out"
+          git init -q && git checkout -q -b firebase-status
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add . && git commit -q -m "Firebase 규칙 적용 결과 ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" firebase-status
+
+      - name: 키 파일 지우기
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
