@@ -2651,7 +2651,7 @@ function netPredict(P,dt){const h=HEROES[P.hero];if(!h||!(h.spd>0))return false;
   else if(bd>10){const c=Math.min(1,dt*5),cx=(P.tx-best.x)*c,cy=(P.ty-best.y)*c;NET.px+=cx;NET.py+=cy;for(const q of H){q.x+=cx;q.y+=cy;}}
   P.x=NET.px;P.y=NET.py;return true;}
 function netGuestStep(dt){
-  if(state==='play'&&player){playerControl();NET.inT-=dt;if(NET.inT<=0){NET.inT=1/30;
+  if(state==='play'&&player){playerControl();NET.inT-=dt;if(NET.inT<=0||NET.inQ.length){NET.inT=1/30;/* 공격·궁은 기다리지 않고 바로 보냄 */
     netSend({t:'in',mx:+player.mx.toFixed(3),my:+player.my.toFixed(3),face:+player.face.toFixed(3),ev:NET.inQ.splice(0)});}}
   /* 화면 정보가 한동안 안 오면 전체를 다시 요청 (시작할 때 놓친 경우 등) */
   NET.since=(NET.since||0)+dt;if((!NET.gotSnap||NET.since>1.2)&&state!=='over'){const nw=Date.now();if(nw-(NET.fullReq||0)>1000){NET.fullReq=nw;netSend({t:'full'});}}
@@ -2674,7 +2674,7 @@ function netHostStep(dt){
       f.mx=Math.max(-1,Math.min(1,+I.mx||0));f.my=Math.max(-1,Math.min(1,+I.my||0));if(!busy(f)&&isFinite(I.face))f.face=+I.face;
       for(const e of I.ev.splice(0)){if(f.dead)continue;const a=+e.a||0,d=e.d==null?null:+e.d;if(e.k==='f')NET_FIRE(f,a,d);else if(e.k==='s')NET_SUP(f,a,d);}}
   }
-  NET.sendT-=dt;if(NET.sendT<=0){NET.sendT=1/15;try{netSendSnaps();}catch(e){}}
+  NET.sendT-=dt;if(NET.sendT<=0){NET.sendT=1/30;try{netSendSnaps();}catch(e){}}/* 초당 30번 (우회 연결은 모듈에서 초당 10번까지만) */
 }
 window.__netStep=dt=>{if(!NET.on)return false;if(NET.role==='guest'){netGuestStep(dt);return true;}netHostStep(dt);return false;};
 function startOnline(d,opt){
