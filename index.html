@@ -2615,7 +2615,9 @@ function netApply(S){
    S.B=un('B',S.B);S.Z=un('Z',S.Z);S.M=un('M',S.M);S.I=un('I',S.I);S.X=un('X',S.X);S.T=un('T',S.T);S.safes=un('S',S.safes);}
   NET.gotSnap=true;
   if(S.G&&NET.baseGrid){for(let r=0;r<grid.length;r++)grid[r]=NET.baseGrid[r].slice();for(const[r,c,v]of S.G)if(grid[r])grid[r][c]=v;}
+  const tNow=performance.now()/1000;NET.since=0;
   S.F.forEach((p,i)=>{const f=fighters[i];if(!f)return;const tx=p.x,ty=p.y;delete p.x;delete p.y;
+    {const dtS=tNow-(f.st0||0);if(f.sx0!=null&&dtS>.02&&dtS<.5&&isFinite(tx)){f.nvx=(tx-f.sx0)/dtS;f.nvy=(ty-f.sy0)/dtS;}else{f.nvx=f.nvy=0;}f.sx0=tx;f.sy0=ty;f.st0=tNow;}
     for(const k in p){if(k[0]==='@'){f[k.slice(1)]=fighters[p[k]]||null;delete p[k];}}
     Object.assign(f,p);f.tx=tx;f.ty=ty;if(f.x==null||!isFinite(f.x)||Math.hypot(tx-f.x,ty-f.y)>220){f.x=tx;f.y=ty;}});
   bullets=S.B.map(p=>{const b=netRebuild(p);b.hit=new Set();return b;});
@@ -2636,10 +2638,28 @@ function netGuestEnd(S){const res=S.res,br=mode.solo?(S.rt==='1위'?'win':'lose'
   /* 방장과 같은 마지막 결과 화면 (다시 하기 없이 나가기만) */
   flow(1800,()=>{ban.className='endban';lastRes={res,sub:S.rs||'',title:S.rt||null,spIdx:S.sp!=null?S.sp:fighters.indexOf(player)};try{showResult();}catch(e){NET.on=false;document.getElementById('toMenu').onclick();}});
 }
+/* 팀원 화면: 내 브롤러는 누르는 즉시 내 기기에서 먼저 움직이고(방장 계산을 기다리지 않음),
+   방장이 보낸 위치가 내가 지나온 길에서 벗어나 있을 때만 조금씩 맞춤 */
+function netPredict(P,dt){const h=HEROES[P.hero];if(!h||!(h.spd>0))return false;
+  const now=performance.now()/1000;
+  if(NET.px==null||!isFinite(NET.px)){NET.px=P.tx;NET.py=P.ty;NET.hist=[];}
+  let mult=(P.stunT>0||P.cocoonT>0||P.rootT>0||P.freeze>0)?0:1;if(P.hasteT>0)mult*=1.35;if(P.slowT>0)mult*=.6;mult*=(P.spdMul||1);
+  const o={x:NET.px,y:NET.py,hero:P.hero,ghostT:P.ghostT,flyT:P.flyT};tryMove(o,(P.mx||0)*h.spd*mult*dt,(P.my||0)*h.spd*mult*dt);NET.px=o.x;NET.py=o.y;
+  const H=NET.hist;H.push({t:now,x:NET.px,y:NET.py});while(H.length&&now-H[0].t>.8)H.shift();
+  let best=null,bd=1e9;for(const q of H){const d=Math.hypot(P.tx-q.x,P.ty-q.y);if(d<bd){bd=d;best=q;}}
+  if(bd>200){NET.px=P.tx;NET.py=P.ty;NET.hist=[];}/* 대시·넉백·순간이동 등 크게 다르면 바로 맞춤 */
+  else if(bd>10){const c=Math.min(1,dt*5),cx=(P.tx-best.x)*c,cy=(P.ty-best.y)*c;NET.px+=cx;NET.py+=cy;for(const q of H){q.x+=cx;q.y+=cy;}}
+  P.x=NET.px;P.y=NET.py;return true;}
 function netGuestStep(dt){
   if(state==='play'&&player){playerControl();NET.inT-=dt;if(NET.inT<=0){NET.inT=1/30;
     netSend({t:'in',mx:+player.mx.toFixed(3),my:+player.my.toFixed(3),face:+player.face.toFixed(3),ev:NET.inQ.splice(0)});}}
-  const k=Math.min(1,dt*14);for(const f of fighters)if(f.tx!=null){f.x+=(f.tx-f.x)*k;f.y+=(f.ty-f.y)*k;}
+  /* 화면 정보가 한동안 안 오면 전체를 다시 요청 (시작할 때 놓친 경우 등) */
+  NET.since=(NET.since||0)+dt;if((!NET.gotSnap||NET.since>1.2)&&state!=='over'){const nw=Date.now();if(nw-(NET.fullReq||0)>1000){NET.fullReq=nw;netSend({t:'full'});}}
+  const k=Math.min(1,dt*14),P=player,pred=P&&!P.dead&&state==='play'&&startT<=0;if(!pred)NET.px=null;
+  for(const f of fighters){if(f.tx==null)continue;
+    if(f===P&&pred&&netPredict(P,dt))continue;
+    if(!f.dead&&f.nvx!=null&&NET.since<.25){f.tx+=f.nvx*dt;f.ty+=f.nvy*dt;}/* 다른 브롤러: 최근 속도로 다음 정보까지 이어서 움직임 */
+    f.x+=(f.tx-f.x)*k;f.y+=(f.ty-f.y)*k;}
   for(const b of bullets)if(b.sp&&b.ang!=null&&isFinite(b.sp)){b.x+=Math.cos(b.ang)*b.sp*dt;b.y+=Math.sin(b.ang)*b.sp*dt;}
   updateFx(dt);
 }
@@ -2660,7 +2680,7 @@ window.__netStep=dt=>{if(!NET.on)return false;if(NET.role==='guest'){netGuestSte
 function startOnline(d,opt){
   opt=opt||{};const B=window.BSO;
   NET.lastD=d;NET.votes=new Set();NET.myVote=false;NET.rematch=false;NET.rematchSent=false;netAgainLabel(0);document.getElementById('again').hidden=false;
-  NET.role=d.host===B.uid?'host':'guest';NET.host=d.host;NET.on=true;NET.ended=false;NET.inputs={};NET.inQ=[];NET.pb={};NET.pq={};NET.gbase=null;NET.glb={};NET.gq=0;NET.snapN=0;NET.sendT=0;NET.inT=0;NET.gotSnap=false;
+  NET.role=d.host===B.uid?'host':'guest';NET.host=d.host;NET.on=true;NET.ended=false;NET.inputs={};NET.inQ=[];NET.pb={};NET.pq={};NET.gbase=null;NET.glb={};NET.gq=0;NET.px=null;NET.hist=[];NET.since=0;NET.fullReq=0;NET.snapN=0;NET.sendT=0;NET.inT=0;NET.gotSnap=false;
   clearFlow();lastDuel=null;duelKind=null;p2=null;duelSel=null;
   mapIdx=d.map;const m=MAPS[mapIdx];buildGrid(m);mode=MODES[m.mode];modeId=m.mode;
   const SZ=mode.solo?(mode.size||1):3,NT=mode.solo?sdTeams(SZ):2;
@@ -2733,8 +2753,7 @@ function netResult(){return !!(NET.on&&(NET.role==='guest'?NET.ended:(state==='o
 function netHumans(){const r=window.BSO&&window.BSO.room;return((NET.lastD&&NET.lastD.roster)||[]).map(h=>h.uid).filter(u=>!r||r.members[u]);}
 function netAgainLabel(n,of){document.getElementById('again').textContent=n?AGAIN_TXT+' ('+n+'/'+of+')':AGAIN_TXT;}
 function netAgainCheck(){const need=netHumans(),n=need.filter(u=>NET.votes.has(u)).length;window.BSO.send({t:'againN',n,of:need.length});netAgainLabel(n,need.length);
-  if(need.length&&n>=need.length&&!NET.rematchSent){NET.rematchSent=true;NET.rematch=true;const c=Object.assign({},NET.lastD);delete c.n;
-    window.BSO.startTeam(c).catch(e=>{NET.rematchSent=false;toast(e.message||'다시 시작하지 못했어요');});}}
+  if(need.length&&n>=need.length&&!NET.rematchSent){NET.rematchSent=true;NET.rematch=true;if(window.__teamStart)window.__teamStart();}}
 window.__netAgain=()=>{if(!netResult())return false;if(NET.myVote)return true;NET.myVote=true;NET.rematch=true;
   if(NET.role==='host'){NET.votes.add(window.BSO.uid);netAgainCheck();}else netSend({t:'again'});
   toast('모두 다시 플레이를 누르면 시작해요');return true;};
@@ -2765,7 +2784,8 @@ document.getElementById('mmCancel').addEventListener('click',()=>{mmStop();toast
 window.__teamPlay=()=>{const i=teamReadyInfo();if(!i)return startPublicMatch();window.BSO.setReady(!i.me,heroRand?'random':chosen).catch(e=>toast(e.message||'준비하지 못했어요'));};
 bso(B=>{
   B.on('room',()=>updatePlayBtn());
-  B.on('allReady',()=>{
+  /* 팀 시작 (모두 준비 완료 · 다시 플레이 둘 다): 랜덤 맵·랜덤 브롤러는 매번 새로 뽑음 */
+  const teamStart=()=>{
     const r=B.room;if(!r)return;
     resolveRandom();const m=MAPS[mapIdx],md=MODES[m.mode];
     const MX=modeMax(m.mode);
@@ -2782,8 +2802,9 @@ bso(B=>{
       B.startTeam(Object.assign({online:1,host:B.uid,map:mapIdx,roster},bots(roster.length))).catch(e=>toast(e.message||'시작하지 못했어요'));
     };
     go(0);
-
-  });
+  };
+  window.__teamStart=teamStart;
+  B.on('allReady',teamStart);
   B.on('start',d=>{
     if(state!=='menu'&&!(d&&d.online&&NET.rematch&&netResult()))return;
     if(d&&d.online){for(const id of['teamBox','chatBox','tcBox','gMenu','profBox','setBox','invBox','mmBox']){const e=document.getElementById(id);if(e)e.hidden=true;}startOnline(d);return;}
