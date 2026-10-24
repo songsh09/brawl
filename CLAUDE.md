@@ -16,6 +16,7 @@
   - 새 `<style>`은 `<head>`가 아니라 `<script>const TAU` 바로 앞(v6 블록 근처)에 넣어야 body 쪽 규칙에 덮이지 않음.
 - Firebase 프로젝트 `brawl090417` (Realtime Database, 싱가포르 `asia-southeast1`, 익명 로그인).
   - 경로: `presence`, `codes`, `invites`, `rooms`(팀 · `rooms/{id}/chat` 팀 채팅), `signal`(WebRTC 연결 정보), `relay`(직접 연결이 안 될 때 우회), `chat`(전체 채팅, 3일 뒤 삭제).
+- App Check(reCAPTCHA v3): 모듈의 `APP_CHECK_SITE_KEY`에 사이트 키가 있으면 켜짐. Firebase 콘솔에서 '적용(enforce)'하면 진짜 게임 페이지가 아닌 요청은 거절됨.
 - 온라인 전투: **방장이 계산**하고 팀원은 조작만 보냄. 연결은 WebRTC 데이터 채널(방장 중심), 안 되면 `relay` 경로(Firebase)로 우회.
   - 화면 정보는 팀원마다 "이미 가진 값"을 기억해 바뀐 값만 보냄(시작·재접속 때만 전체). 메시지 번호(`q`)가 안 이어지면 팀원이 `{t:'full'}`로 전체를 다시 요청.
 - 서버(Cloud Run) 방식은 쓰지 않기로 해서 코드를 지웠음. 다시 넣지 않는다.

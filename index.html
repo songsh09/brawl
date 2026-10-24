@@ -145,6 +145,7 @@
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js">
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js">
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check.js">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;600;700;900&display=block">
 <style>
 /* Layout: one full-screen canvas arena; HTML overlays for hero/map select and results. Single dark arcade look. */
@@ -5761,6 +5762,7 @@ requestAnimationFrame(loop);
 /* ===== 온라인 모듈 (Firebase: 익명 로그인 · 친구 코드 · 접속 · 전체 채팅 · 초대 · 팀 / WebRTC: 기기끼리 직접 연결) ===== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check.js";
 import { getDatabase, ref, set, get, update, remove, onValue, onChildAdded, onDisconnect, push, serverTimestamp, runTransaction, query, orderByChild, startAt, endAt, limitToLast, limitToFirst } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
 const firebaseConfig = {
@@ -5772,6 +5774,9 @@ const firebaseConfig = {
   messagingSenderId: "327147279662",
   appId: "1:327147279662:web:6dcfba7867660b632a56bf"
 };
+/* App Check: 진짜 게임 페이지(songsh09.github.io)에서 온 요청만 Firebase가 받게 함.
+   reCAPTCHA v3 사이트 키(공개해도 되는 값)를 넣으면 켜짐. 비어 있으면 꺼짐. */
+const APP_CHECK_SITE_KEY = '';
 const ICE = { iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }] };
 const CHAT_KEEP = 3 * 24 * 60 * 60 * 1000;
 
@@ -5788,7 +5793,9 @@ const BSO = window.BSO = {
 
 let app, auth, db;
 try {
-  app = initializeApp(firebaseConfig); auth = getAuth(app); db = getDatabase(app);
+  app = initializeApp(firebaseConfig);
+  if (APP_CHECK_SITE_KEY) { try { initializeAppCheck(app, { provider: new ReCaptchaV3Provider(APP_CHECK_SITE_KEY), isTokenAutoRefreshEnabled: true }); } catch (e) { console.warn('App Check', e); } }
+  auth = getAuth(app); db = getDatabase(app);
 } catch (e) { emit('status', '온라인 준비 실패: ' + (e.message || e)); }
 
 let me = null, myCode = null, st = '메뉴';
